@@ -1,0 +1,31 @@
+Round 3 recheck of the SDLC self-bootstrap on /Users/stefanayala/claude-gdlc-wizard.
+
+Round 2 verdict: NEEDS_WORK 6/10 (see .reviews/codex-review-sdlc-bootstrap-r2.md). Round 3 fixes are the most recent commit on `main` (run `git log -1 --pretty='%h %s'` to confirm). The handoff at .reviews/handoff-sdlc-bootstrap.json has been updated: round 3, with `round_3_fixes_applied[]` enumerating each round-2 finding and how it was addressed.
+
+Your job: verify each round-2 finding was actually closed by the round-3 fix. For each fix in `round_3_fixes_applied`, do this:
+
+1. Re-run the round-2 verification command that produced the FAIL/STILL_OPEN/NEW_ISSUE.
+2. Confirm whether the new state passes or still fails.
+3. Report [CLOSED | STILL_OPEN | NEW_ISSUE] with the exact command + output that justifies the call.
+
+Specifically address:
+
+**(b) Hook inventory honesty** — the round-2 fix was *not* to restore the plugin (which was disabled outside Claude's reach), but to rewrite SDLC.md §Hooks to honestly say enforcement is OFF and discipline is now doc-driven. Verify: SDLC.md no longer claims an active plugin path that doesn't exist; reference_sdlc_wizard_wrap.md memory was updated to DISABLED. Is the new framing complete and accurate?
+
+**(g) Compliance block fail-fast** — the new block has a fail-fast init, an explicit DRIFT capture, and trap-based cleanup. Try the same masking-test you did before:
+  bash -c 'set -euo pipefail; ( false ); echo masked'
+should now produce no "masked" output (because `false` outside `||`-guards triggers `set -e`). The new block's structure should NOT mask init failures.
+
+**(j) Honest-status check (item 6 in compliance block)** — read the new item 6. Does it actually catch the failure mode that round 2 identified (CERTIFIED claim while handoff is PENDING_*)? Test by running the block against the current tree, where the handoff IS PENDING_RECHECK and ARCHITECTURE.md has been updated to remove the false CERTIFIED claim. The block should now PASS.
+
+**Traceability** — does .reviews/handoff-sdlc-bootstrap.json now record the actual on-HEAD hash for round 2 (0d7bfa5)? Run:
+  git merge-base --is-ancestor 0d7bfa5 HEAD; echo $?
+Expect exit 0 (is-ancestor). And confirm 047fc83 is NOT on HEAD:
+  git merge-base --is-ancestor 047fc83 HEAD 2>/dev/null; echo $?
+Expect non-zero or git complaining the hash doesn't exist.
+
+After the recheck:
+- Re-grade overall: CERTIFIED | NEEDS_WORK | REJECTED with score 0-10.
+- Note any NEW issues introduced by the round-3 fixes themselves.
+
+Be strict. The dialogue rule applies — don't grade upward just because round 3 happened. Push back if a fix is incomplete.
