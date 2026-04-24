@@ -7,7 +7,7 @@
 
 | Property | Value |
 |----------|-------|
-| Wizard Version (last loaded) | 1.30.0 — from local plugin `~/.claude/plugins-local/sdlc-wizard-wrap/` (DISABLED 2026-04-24, dir renamed to `.sdlc-wizard-wrap.disabled-2026-04-24`; in-session hooks remain in memory until session restart) |
+| Wizard Version (last loaded) | 1.30.0 — from local plugin at `~/.claude/plugins-local/.sdlc-wizard-wrap.disabled-2026-04-24/` (DISABLED via dir-rename on 2026-04-24; in-session hooks remain in memory until session restart). See `reference_sdlc_wizard_wrap.md` in global memory for the original name and re-enable path. |
 | Wizard Version (upstream) | 1.36.1 at `~/tmp-refs/claude-sdlc-wizard/` (6 minor versions ahead of the disabled wrap; see `reference_sdlc_wizard_wrap.md` for re-enable + update paths) |
 | Setup Date | 2026-04-24 |
 | Claude Code Baseline | v2.1.69+ required (`InstructionsLoaded` hook, skill directory variable, Tasks system) |

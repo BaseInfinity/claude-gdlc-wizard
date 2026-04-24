@@ -1,7 +1,7 @@
 {
   "review_id": "sdlc-bootstrap-001",
   "status": "PENDING_RECHECK",
-  "round": 4,
+  "round": 5,
   "commit": "1ad9441",
   "round_2_commit": "0d7bfa5",
   "round_3_commit": "59c582b",
@@ -61,8 +61,21 @@
       "commit_at_review_time": "59c582b",
       "review_md": "codex-review-sdlc-bootstrap-r3.md",
       "findings_summary": "(b) STILL_OPEN — SDLC.md had 4 lingering active-plugin claims outside §Hooks (Wizard Version row + §Skills heading + References footer). (g) CLOSED — fail-fast structure works. (j) NEW_ISSUE — item 6 honest-status check has 4 bugs: (1) `// empty` only applied to last jq field; (2) grep too broad — matched archived review-machinery; (3) handoff JSON had duplicate `round_2_commit` keys; (4) compliance block read the stale duplicate.",
-      "fixes_landed_in": "round 4 (this iteration)"
+      "fixes_landed_in": "b6f5935 (round 4 commit)"
+    },
+    {
+      "round": 4,
+      "score": 7,
+      "verdict": "NEEDS_WORK",
+      "commit_at_review_time": "b6f5935",
+      "review_md": "codex-review-sdlc-bootstrap-r4.md",
+      "findings_summary": "(b) STILL_OPEN — SDLC.md:10 still contained the bare path string `sdlc-wizard-wrap/` (in 'originally' parenthetical), tripping the round-3 grep `sdlc-wizard-wrap/[^.]` even though the surrounding wording was correct DISABLED context. Item 6 honest-status: CLOSED. Handoff structural cleanup: CLOSED. False-positive smoke: CLOSED with sandbox caveat (Codex couldn't mutate files but ran a non-mutating equivalent that fired the right error).",
+      "fixes_landed_in": "round 5 (this iteration)"
     }
+  ],
+  "round_5_recheck_focus": [
+    "SDLC.md:10 no longer contains the bare path `sdlc-wizard-wrap/` — replaced with the disabled path as canonical, and the 'originally' parenthetical removed (the disabled-path filename already implies the original name). Pointer to global memory for re-enable path.",
+    "rg -n 'sdlc-wizard-wrap/[^.]' SDLC.md TESTING.md ARCHITECTURE.md CLAUDE.md must return empty (verified locally; exit 1)."
   ],
   "round_4_recheck_focus": [
     "SDLC.md §Wizard Version Tracking now says 'last loaded' not 'active', acknowledges DISABLED state explicitly.",
