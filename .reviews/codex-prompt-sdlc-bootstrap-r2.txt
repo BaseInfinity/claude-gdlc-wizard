@@ -1,0 +1,22 @@
+Round 2 recheck of the SDLC self-bootstrap on /Users/stefanayala/claude-gdlc-wizard.
+
+Round 1 verdict was NEEDS_WORK 5/10 (see .reviews/codex-review-sdlc-bootstrap.md). Round 2 fixes shipped in commit 047fc83. The handoff at .reviews/handoff-sdlc-bootstrap.json has been updated: status PENDING_RECHECK, round 2, with a `fixes_applied` array enumerating each round-1 finding and how it was addressed.
+
+Your job: verify each round-1 finding was actually closed by the round-2 fix. For each fix in `fixes_applied`, do this:
+
+1. Re-run the round-1 verification command that produced the FAIL/CONCERN.
+2. Confirm whether the new state passes or still fails.
+3. Report [CLOSED | STILL_OPEN | NEW_ISSUE] with the exact command + output that justifies the call.
+
+Then:
+- Re-grade overall verdict: CERTIFIED | NEEDS_WORK | REJECTED with numeric 0-10 score.
+- Specifically address: did the bootstrap-doc self-exemption removal in `SDLC.md §Blast radius tier` actually fix the dogfooding gap? Or does the new rule create a different gap?
+- Address the pushback on round-1 finding (c): is the test-count claim now defensible? Run `rg -c '^test_[a-z0-9_]+$' tests/*.sh` and verify total = 94. (You cannot run the test suite itself in your sandbox, so the assertion-count check is the falsifiable proxy.)
+- Note any new issues introduced by the round-2 fixes themselves.
+
+Read at minimum:
+- The round-2 commit: `git show 047fc83`
+- The retroactive preflight: `.reviews/preflight-sdlc-bootstrap.md`
+- The 6 modified files for the cross-doc consistency check.
+
+Be strict. The dialogue rule applies — if a "fix" doesn't actually fix, push back. Don't grade upward just because round 2 happened.
