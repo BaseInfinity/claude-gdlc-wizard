@@ -1,0 +1,36 @@
+{
+  "name": "claude-gdlc-wizard",
+  "version": "0.1.0",
+  "description": "GDLC enforcement for Claude Code — persona-driven playtest cycles, triangulated findings, ratchet-only-tightens. Sibling to claude-sdlc-wizard, for games instead of code.",
+  "files": [
+    "skills/",
+    ".claude-plugin/",
+    "CLAUDE_CODE_GDLC_WIZARD.md",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "keywords": [
+    "claude-code",
+    "gdlc",
+    "game-dev",
+    "playtest",
+    "ai-agent",
+    "developer-tools"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BaseInfinity/claude-gdlc-wizard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BaseInfinity/gdlc/issues"
+  },
+  "homepage": "https://github.com/BaseInfinity/claude-gdlc-wizard#readme",
+  "author": {
+    "name": "Stefan Ayala",
+    "url": "https://github.com/BaseInfinity"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

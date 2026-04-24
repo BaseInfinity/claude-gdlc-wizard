@@ -1,0 +1,12 @@
+{
+  "name": "gdlc-wizard",
+  "version": "0.1.0",
+  "description": "GDLC enforcement for AI agents — persona-driven playtest cycles, triangulated findings, ratchet-only-tightens. Sibling to claude-sdlc-wizard.",
+  "author": {
+    "name": "Stefan Ayala",
+    "url": "https://github.com/BaseInfinity"
+  },
+  "repository": "https://github.com/BaseInfinity/claude-gdlc-wizard",
+  "license": "MIT",
+  "keywords": ["gdlc", "game-dev", "playtest", "ai-agent", "developer-tools"]
+}
