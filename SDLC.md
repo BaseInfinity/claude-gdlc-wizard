@@ -7,8 +7,8 @@
 
 | Property | Value |
 |----------|-------|
-| Wizard Version (active) | 1.30.0 — from global plugin `~/.claude/plugins-local/sdlc-wizard-wrap/` |
-| Wizard Version (upstream) | 1.36.1 at `~/tmp-refs/claude-sdlc-wizard/` (stale by 6 minor versions; see `reference_sdlc_wizard_wrap.md`) |
+| Wizard Version (last loaded) | 1.30.0 — from local plugin `~/.claude/plugins-local/sdlc-wizard-wrap/` (DISABLED 2026-04-24, dir renamed to `.sdlc-wizard-wrap.disabled-2026-04-24`; in-session hooks remain in memory until session restart) |
+| Wizard Version (upstream) | 1.36.1 at `~/tmp-refs/claude-sdlc-wizard/` (6 minor versions ahead of the disabled wrap; see `reference_sdlc_wizard_wrap.md` for re-enable + update paths) |
 | Setup Date | 2026-04-24 |
 | Claude Code Baseline | v2.1.69+ required (`InstructionsLoaded` hook, skill directory variable, Tasks system) |
 | Recommended Model | `opus[1m]` (Opus 4.7, 1M context) — `/model opus[1m]` |
@@ -76,7 +76,9 @@ If you want to restore active hook enforcement, rename the wrap back (`mv .sdlc-
 
 **Not installed (missing from v1.30.0):** `precompact-seam-check.sh` (PreCompact block mid-review/rebase), `model-effort-check.sh` (upgrade nudge). Added in upstream v1.32+.
 
-## Skills available (from the global plugin)
+## Skills available (formerly from the wrap plugin — currently disabled)
+
+These four skills lived in the wrap plugin and were callable as `/sdlc-wizard:<name>` while the plugin was enabled. After the 2026-04-24 disable, new sessions will not surface them. Re-enable per the wrap reference memory if you need the skill commands back.
 
 | Skill | Invoke | Purpose |
 |-------|--------|---------|
@@ -136,19 +138,26 @@ if printf '%s' "$MSG" | grep -qE 'Co-Authored-By.*Claude|Generated with.*Claude'
   echo "tip commit contains AI attribution footer"; exit 1
 fi
 
-# 6. Honest-status check on review artifacts referenced anywhere in the working tree.
-#    No CERTIFIED claim while the underlying handoff is PENDING_*. No commit-hash citation
-#    that isn't an ancestor of HEAD (covers the auto-amend behavior where original commit
-#    hashes get rewritten by the post-commit hook chain).
+# 6. Honest-status check on review artifacts referenced in *publishing* docs (not in the
+#    review archives themselves). No CERTIFIED claim while the underlying handoff is
+#    PENDING_*. No commit-hash citation that isn't an ancestor of HEAD (covers the
+#    auto-amend behavior where original commit hashes get rewritten by the post-commit
+#    hook chain).
+PUBLISHING_DOCS=( SDLC.md TESTING.md ARCHITECTURE.md CLAUDE.md README.md CHANGELOG.md CLAUDE_CODE_GDLC_WIZARD.md )
 for HANDOFF in "$REPO"/.reviews/handoff-*.json; do
   [ -f "$HANDOFF" ] || continue
-  STATUS="$(jq -r '.status' "$HANDOFF")"
+  STATUS="$(jq -r '.status // "UNKNOWN"' "$HANDOFF")"
   NAME="$(basename "$HANDOFF" .json | sed 's/^handoff-//')"
-  if [ "$STATUS" != "CERTIFIED" ] && grep -RqE "${NAME}.*CERTIFIED" "$REPO" --include='*.md' --include='*.json' 2>/dev/null; then
-    echo "honest-status fail: $HANDOFF is $STATUS but a doc claims CERTIFIED"; exit 1
+  if [ "$STATUS" != "CERTIFIED" ]; then
+    # Scope the grep to publishing docs only — review-machinery archives may quote false
+    # claims as historical evidence (that's why they exist), so they're excluded.
+    if (cd "$REPO" && grep -lE "${NAME}.*CERTIFIED" "${PUBLISHING_DOCS[@]}" 2>/dev/null | grep -q .); then
+      echo "honest-status fail: $HANDOFF is $STATUS but a publishing doc claims CERTIFIED"; exit 1
+    fi
   fi
-  for HASH in $(jq -r '.commit, .round_2_commit, .round_3_commit // empty' "$HANDOFF" 2>/dev/null); do
-    [ -z "$HASH" ] && continue
+  # Per-field `// empty` so missing optional fields produce empty output, not the literal "null"
+  HASHES="$(jq -r '(.commit // empty), (.round_2_commit // empty), (.round_3_commit // empty)' "$HANDOFF" 2>/dev/null)"
+  for HASH in $HASHES; do
     git -C "$REPO" merge-base --is-ancestor "$HASH" HEAD 2>/dev/null \
       || { echo "honest-status fail: $HANDOFF cites $HASH not on HEAD"; exit 1; }
   done
@@ -177,4 +186,4 @@ Changes in this repo affect consumer installs the moment they publish. Default: 
 - `ARCHITECTURE.md` — what this repo is structurally
 - `CLAUDE.md` — project overview + commands + code style
 - `~/xdlc/README.md` — the XDLC meta-framework + Interop Pattern §
-- `~/.claude/projects/-Users-stefanayala/memory/reference_sdlc_wizard_wrap.md` — how the active plugin gets here and how to update it
+- `~/.claude/projects/-Users-stefanayala/memory/reference_sdlc_wizard_wrap.md` — how the wrap plugin works, current DISABLED state, and the re-enable path

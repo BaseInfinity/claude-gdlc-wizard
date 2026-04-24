@@ -1,0 +1,43 @@
+Round 4 recheck of the SDLC self-bootstrap on /Users/stefanayala/claude-gdlc-wizard.
+
+Round 3 verdict: NEEDS_WORK 6/10 (see .reviews/codex-review-sdlc-bootstrap-r3.md). Round 3 closed the masking bug and the architecture false-certification text but flagged: (1) SDLC.md still claims an active plugin path in 4 places outside §Hooks; (2) the new honest-status check (item 6) has 4 implementation bugs; (3) the handoff JSON has duplicate keys; (4) item 6 reads the stale duplicate.
+
+Round 4 is the most recent commit on `main`. The handoff at .reviews/handoff-sdlc-bootstrap.json has been **structurally rewritten** — single source of truth, no duplicate keys, round_history array tracking each round's findings + fixes.
+
+Your job: verify each round-3 finding was actually closed. For each, do this:
+
+1. Re-run the round-3 verification command that produced the failure.
+2. Confirm whether the new state passes or still fails.
+3. Report [CLOSED | STILL_OPEN | NEW_ISSUE] with the exact command + output.
+
+Specifically address:
+
+**Lingering active-plugin claims** — round 3 found 4 in SDLC.md outside §Hooks:
+- Line ~10: "Wizard Version (active)"
+- Line ~79: "## Skills available (from the global plugin)"
+- Line ~180: "how the active plugin gets here"
+And: rg should not find "global plugin" / active-plugin language anywhere outside the disabled-state context.
+
+Run:
+  rg -n 'active.*plugin|from the global plugin|Wizard Version \(active\)' SDLC.md TESTING.md ARCHITECTURE.md CLAUDE.md
+  rg -n 'sdlc-wizard-wrap/[^.]' SDLC.md TESTING.md ARCHITECTURE.md CLAUDE.md  # path uses without .disabled-* suffix
+
+**Item 6 honest-status check** — round 3 found 4 bugs. The round-4 fix:
+- Per-field `// empty` so missing optional fields don't become literal "null"
+- PUBLISHING_DOCS array scoping the CERTIFIED grep so it doesn't match archived review-machinery
+- handoff JSON restructured to drop duplicate keys
+
+Run item 6 directly against the current tree and confirm exit 0:
+  REPO=/Users/stefanayala/claude-gdlc-wizard PUBLISHING_DOCS=( SDLC.md TESTING.md ARCHITECTURE.md CLAUDE.md README.md CHANGELOG.md CLAUDE_CODE_GDLC_WIZARD.md ); set -euo pipefail; for HANDOFF in "$REPO"/.reviews/handoff-*.json; do [ -f "$HANDOFF" ] || continue; STATUS="$(jq -r '.status // "UNKNOWN"' "$HANDOFF")"; NAME="$(basename "$HANDOFF" .json | sed 's/^handoff-//')"; if [ "$STATUS" != "CERTIFIED" ]; then if (cd "$REPO" && grep -lE "${NAME}.*CERTIFIED" "${PUBLISHING_DOCS[@]}" 2>/dev/null | grep -q .); then echo "honest-status fail: $HANDOFF is $STATUS but a publishing doc claims CERTIFIED"; exit 1; fi; fi; HASHES="$(jq -r '(.commit // empty), (.round_2_commit // empty), (.round_3_commit // empty)' "$HANDOFF" 2>/dev/null)"; for HASH in $HASHES; do git -C "$REPO" merge-base --is-ancestor "$HASH" HEAD 2>/dev/null || { echo "honest-status fail: $HANDOFF cites $HASH not on HEAD"; exit 1; }; done; done; echo "honest-status: PASS"
+
+**Handoff structural cleanup** — verify JSON validity + no duplicate keys:
+  jq . .reviews/handoff-sdlc-bootstrap.json >/dev/null && echo VALID
+  jq -r 'paths(scalars) | join(".")' .reviews/handoff-sdlc-bootstrap.json | sort | uniq -d  # should be empty
+
+**Round-4 false-positive smoke test** — temporarily inject "<!-- sdlc-bootstrap CERTIFIED -->" into SDLC.md, re-run item 6, expect exit 1 with the right error message, then revert.
+
+After the recheck:
+- Re-grade overall: CERTIFIED | NEEDS_WORK | REJECTED with score 0-10.
+- This is round 4. The dialogue rule still applies — if a fix is incomplete, push back; if all rounds 1-3 findings are CLOSED and no new issues, you may certify.
+
+Be strict. Score upward only on actual closure, not because we ran another round.

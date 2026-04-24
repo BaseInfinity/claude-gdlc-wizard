@@ -1,52 +1,77 @@
 {
   "review_id": "sdlc-bootstrap-001",
   "status": "PENDING_RECHECK",
-  "round": 3,
-  "round_2_commit_actual": "0d7bfa5 (was originally 047fc83 at git commit time; amended by ~/.afterhours/hooks/post-commit immediately after — only 0d7bfa5 is on main)",
-  "round_3_fixes_applied": [
-    "(b) HOOK INVENTORY STILL_OPEN: SDLC.md §Hooks rewritten to honestly reflect the 2026-04-24 16:33 plugin disable. The wrap was renamed to ~/.claude/plugins-local/.sdlc-wizard-wrap.disabled-2026-04-24/ outside this session, so any 'active plugin' claim was factually wrong. New framing: hook enforcement is OFF; discipline is doc-driven and test-driven now (tests + Codex review + verification block remain).",
-    "(g) COMPLIANCE BLOCK NEW_ISSUE: The scratch check's `&& ... || true` chain masked init/check failures. Refactored to a fail-fast init followed by an explicit DRIFT capture; non-empty DRIFT prints the offending paths and exits 1. Added trap to clean up scratch dir on any exit.",
-    "(j) BLAST-RADIUS NEW_ISSUE: review-machinery exemption was too broad; it let me write 'CERTIFIED after round 2' in ARCHITECTURE.md while the handoff was PENDING_RECHECK. Tightened: review-machinery edits skip the full Codex round but MUST pass an honest-status check (no false CERTIFIED claims, no commit-hash citations not on HEAD). Implemented as item 6 in the compliance block.",
-    "CROSS-DOC FIX 2 NEW_ISSUE: ARCHITECTURE.md tree's '.reviews/' enumeration was both incomplete (missing r2 prompt/log) and falsely annotated (CERTIFIED). Rewrote as a glob-pattern listing that points to the live directory rather than enumerating, so it doesn't go stale every round.",
-    "TRACEABILITY ISSUE: This handoff now records the actual on-HEAD hash for round 2 (0d7bfa5). Documented the auto-amend behavior in SDLC.md §Compliance verification 'On commit-hash auto-amend' — citations must be re-resolved post-commit because ~/.afterhours/hooks/post-commit rewrites every commit immediately."
-  ],
-  "round_3_caveat_on_environment": "The Codex sandbox (read-only) cannot run `git checkout -- hooks/` because that requires creating .git/index.lock. The reviewer can therefore not run the test suite end-to-end. Use the falsifiable proxy: `rg -c '^test_[a-z0-9_]+$' tests/*.sh` should sum to 94. The full suite was run green (94/94) here in the local dev environment immediately before commit.",
-  "fixes_applied": [
-    "(b) HOOK INVENTORY: SDLC.md §Hooks active rewritten — explicit '5 entries = 4 scripts + 1 manifest' framing. The wrap dir count is 5 (not 4), and hooks.json is the plugin manifest.",
-    "(f) STALE SDLC REFS: TESTING.md:96 replaced stale-package-name enumeration with abstract rule ('legacy SDLC package-name leakage'). The doc no longer literally contains 'agentic-sdlc-wizard'.",
-    "(g) COMPLIANCE BLOCK: SDLC.md §Compliance verification rewritten with set -euo pipefail, named release artifacts (test -f .reviews/preflight-${RELEASE}.md, no glob), and scratch-dir tmpdir simulation for `gdlc-wizard check` (running at this repo's root legitimately returns MISSING because the repo is the distribution, not a consumer).",
-    "(j) BLAST-RADIUS SELF-EXEMPTION: SDLC.md §Blast radius tier rewritten — bootstrap docs (SDLC.md/TESTING.md/ARCHITECTURE.md/CLAUDE.md) now require preflight + Codex round before merge, no self-exemption. Only review-machinery files (preflight-*.md/handoff-*.json/codex-review-*.md) get exemption from meta-review (with rationale: infinite regress).",
-    "CROSS-DOC FIX 1: CLAUDE.md:53 'init' was incorrectly described as dry-run. Replaced with two correct rows: 'init --dry-run' for safe preview, and a `cd $(mktemp -d) && node ...init` pattern for real install in scratch dir.",
-    "CROSS-DOC FIX 2: ARCHITECTURE.md:47 added .gitignore to repo-layout tree; expanded .reviews/ enumeration to include preflight-sdlc-bootstrap.md, handoff-sdlc-bootstrap.json, codex-review-sdlc-bootstrap.md, codex-review-sdlc-bootstrap.log.",
-    "DOGFOODING FIX: .reviews/preflight-sdlc-bootstrap.md written retroactively (acknowledged in the file's first paragraph as the round-2 fix to the dogfood gap). Establishes the precedent for the new blast-radius rule.",
-    "PUSHBACK ON (c): Round 1 rated CONCERN because Codex's read-only sandbox blocked the test suite from running. We ran 94/94 green before commit 1ad9441. Codex's own ripgrep test_count came back at 94 (22+13+18+20+21), corroborating the claim. No doc change required."
-  ],
-  "previous_round_score": 5,
-  "round_2_commit": "047fc83",
-  "mission": "Commit 1ad9441 on `main` added 4 SDLC artifacts (CLAUDE.md, SDLC.md, TESTING.md, ARCHITECTURE.md) + 2 .gitignore lines to `claude-gdlc-wizard` — a wizard-distribution repo that ships the GDLC skill suite to consumer game projects via npx/curl/plugin-marketplace. The repo is NOT a game project and NOT GDLC-managed; it IS a software project so SDLC discipline now governs its own development (per xdlc Interop Pattern — every sibling runs SDLC alongside its domain DLC). Verify that the 4 artifacts are honest, internally consistent, and accurately reflect what is actually shipped and what is actually tested. This bootstrap was performed by Claude Opus 4.7 in auto-mode; no human reviewed before commit.",
-  "success": "Reviewer verifies: (1) SDLC.md's claimed hook inventory (4 hooks from global `sdlc-wizard-wrap` plugin at v1.30.0) matches what is actually installed at `~/.claude/plugins-local/sdlc-wizard-wrap/plugins/sdlc-wizard/hooks/` — expect sdlc-prompt-check.sh, instructions-loaded-check.sh, tdd-pretool-check.sh, _find-sdlc-root.sh. The 2 hooks claimed as 'not installed' (precompact-seam-check.sh, model-effort-check.sh) are genuinely absent from the wrap dir. (2) TESTING.md's per-suite assertion counts (22 + 13 + 18 + 20 + 21 = 94) match reality — run `for t in tests/*.sh; do bash \"$t\" && echo \"--- $t done\"; done` from repo root after `git checkout -- hooks/` and confirm 0 failures, then count visible assertions per suite. (3) ARCHITECTURE.md's ASCII repo-layout tree matches the actual tree — compare against `ls -R`. (4) SDLC.md's 'compliance verification' block is executable bash that actually works — run each command and confirm exit 0 on the happy path. (5) CLAUDE.md's 'Commands' table entries all work — `node cli/bin/gdlc-wizard.js --help`, `--version`, and each `bash tests/<name>.sh` invocation. (6) No cross-doc claim conflicts — e.g., the hook event list in ARCHITECTURE.md matches hooks/hooks.json (UserPromptSubmit + InstructionsLoaded). (7) No stale SDLC-sibling residue leaked in — grep for 'agentic-sdlc-wizard', 'setup-wizard' (as a bare skill name without gdlc- prefix), 'SDLC BASELINE' in the 4 new files outside of quoted context. (8) The 'session quirks' section in CLAUDE.md/TESTING.md honestly documents the hooks/ wipe rather than hiding it. (9) SDLC.md's version-tracking table cites v1.30.0 active vs 1.36.1 upstream — verify the upstream version claim by reading `~/tmp-refs/claude-sdlc-wizard/CHANGELOG.md` first entry.",
-  "failure": "Reviewer rubber-stamps without checking (a) that the hook inventory claim is ground-truth vs aspirational — if the 4 listed hooks aren't all present in the wrap dir, SDLC.md is lying; (b) that the test-assertion count is correct — claimed 94, but if the real total is different, TESTING.md is lying; (c) that the fresh-tmpdir install simulation in TESTING.md actually works end-to-end, including the 6 MATCH idempotent re-run; (d) that the 'compliance verification' block's grep for conventional-commit prefix + AI-attribution absence works on the tip commit (1ad9441) — if the commit message violates the rule the block claims to enforce, that's a lie-in-docs bug; (e) whether the 'blast radius tier' categorization in SDLC.md actually excludes SDLC.md/TESTING.md/ARCHITECTURE.md/CLAUDE.md from Codex-review requirement (currently says 'internal-dev only → standard review') — if yes, that's dogfooding failure because the bootstrap commit itself falls under this exclusion and avoids review; (f) any stylistic AI-slop phrases (`delve`, `navigate the landscape`, `deep dive`, `comprehensive`) per user's feedback_no_ai_slop rule; (g) whether the `~/.claude/plugins-local/sdlc-wizard-wrap/` reference in multiple files correctly distinguishes it as an internal-only system resource (the wrap isn't checked into any repo, isn't on GitHub — see reference_sdlc_wizard_wrap.md in global memory).",
+  "round": 4,
+  "commit": "1ad9441",
+  "round_2_commit": "0d7bfa5",
+  "round_3_commit": "59c582b",
+  "amend_note": "All commit-hash fields above are the on-HEAD (post-amend) hashes. ~/.afterhours/hooks/post-commit rewrites every commit immediately after creation, so the hashes printed by `git commit` itself are not on `main`. These fields are re-resolved with `git rev-parse` after the post-commit hook runs. Stale (pre-amend) hashes that should NOT be referenced anywhere: 445c783, c3e1c21, 047fc83, 04fe06d, 07e6d88, f5f8265.",
   "files_changed": [
     "CLAUDE.md",
     "SDLC.md",
     "TESTING.md",
     "ARCHITECTURE.md",
-    ".gitignore"
+    ".gitignore",
+    ".reviews/preflight-sdlc-bootstrap.md",
+    ".reviews/handoff-sdlc-bootstrap.json",
+    ".reviews/codex-prompt-sdlc-bootstrap.txt",
+    ".reviews/codex-prompt-sdlc-bootstrap-r2.txt",
+    ".reviews/codex-prompt-sdlc-bootstrap-r3.txt",
+    ".reviews/codex-review-sdlc-bootstrap.md",
+    ".reviews/codex-review-sdlc-bootstrap-r2.md",
+    ".reviews/codex-review-sdlc-bootstrap-r3.md"
   ],
-  "commit": "1ad9441",
+  "mission": "Commit 1ad9441 added 4 SDLC artifacts (CLAUDE.md, SDLC.md, TESTING.md, ARCHITECTURE.md) + .gitignore lines to claude-gdlc-wizard — a wizard-distribution repo. The repo is NOT a game project; it IS a software project, so SDLC governs how the distribution machinery is built (per xdlc Interop Pattern). Verify the artifacts are honest, internally consistent, and ground-truth against the filesystem, test counts, and upstream version claims. Subsequent rounds (2, 3, 4) fixed Codex findings; round 4 is now under recheck.",
+  "success": "Reviewer verifies in round 4: (1) §Hooks in SDLC.md no longer claims an active plugin path that doesn't exist on disk; (2) the compliance-block fail-fast structure (item 2 scratch check + item 6 honest-status check) actually catches the failure modes round-2/round-3 identified; (3) the handoff JSON is now structurally clean (no duplicate keys); (4) every cited commit hash is an ancestor of HEAD; (5) the live test suite still totals 94 assertions (run `rg -c '^test_[a-z0-9_]+$' tests/*.sh` and sum); (6) no AI-slop terms; (7) the round_history accurately reflects what each round did.",
+  "failure": "Reviewer rubber-stamps without (a) running item 6 honest-status check against the current tree and confirming exit 0; (b) confirming there are no duplicate JSON keys via `jq -e '. as $o | reduce paths(scalars) as $p ({}; .[$p[0]] += 1) | to_entries | map(select(.value > 1))' .reviews/handoff-sdlc-bootstrap.json`; (c) verifying every hash in the JSON is an ancestor of HEAD; (d) checking that SDLC.md has no remaining active-plugin claims (the round-3 finding (b) STILL_OPEN was about *publishing-doc* claims, not just §Hooks).",
   "verification_checklist": [
-    "(a) Run `git show --stat 1ad9441` → expect 5 files changed, 593 insertions, 0 deletions. Any delta = misrepresentation in this handoff.",
-    "(b) Run `ls ~/.claude/plugins-local/sdlc-wizard-wrap/plugins/sdlc-wizard/hooks/` → expect exactly 4 entries matching SDLC.md §Hooks. Any extra or missing = SDLC.md inventory lie.",
-    "(c) Run `git checkout -- hooks/ && for t in tests/*.sh; do echo \"--- $t\"; bash \"$t\" || exit 1; done` → expect 5 suites all pass. Count the 'pass' / 'ok' / checkmark assertions per suite. TESTING.md claims 22 + 13 + 18 + 20 + 21 = 94.",
-    "(d) Read `~/tmp-refs/claude-sdlc-wizard/CHANGELOG.md` first `## [X.X.X]` line → confirm 1.36.1 or newer. SDLC.md cites 1.36.1 as upstream.",
-    "(e) Diff the ASCII tree in ARCHITECTURE.md §'Repo layout' against real `find . -maxdepth 3 -not -path './.git*' -not -path './node_modules*' | sort`. Allowed: comments / explanatory annotations in the tree. Disallowed: missing or fabricated paths.",
-    "(f) Grep CLAUDE.md + TESTING.md + SDLC.md + ARCHITECTURE.md for 'agentic-sdlc-wizard' and 'claude-sdlc-wizard' as stale product references. The latter is acceptable as a comparison reference (e.g., 'vs claude-sdlc-wizard'); the former is always stale (renamed 2026-04-23).",
-    "(g) Run the compliance-verification block in SDLC.md §'Compliance verification' against commit 1ad9441. The conventional-commit prefix check + AI-attribution-absence check must pass. If they fail, either the block is broken or the commit message is non-compliant — flag either.",
-    "(h) Grep the 4 new files for AI-slop patterns: `delve`, `game-changer`, `elevate`, `deep dive`, `navigate`, `seamlessly`, `comprehensive`, `robust` (used vacuously), `landscape`. Any hit = rewrite required per user's feedback_no_ai_slop rule.",
-    "(i) Compare event list: `jq '.hooks | keys[]' hooks/hooks.json | sort` vs `jq '.hooks | keys[]' cli/templates/settings.json | sort`. Both must emit exactly `InstructionsLoaded` + `UserPromptSubmit`. ARCHITECTURE.md says event parity between plugin and CLI is enforced by tests/test-plugin.sh.",
-    "(j) Read SDLC.md §'Blast radius tier'. Does it explicitly exclude the 4 SDLC-artifact files themselves from Codex-review? If so, this bootstrap commit avoided Codex review by its own rules — flag as dogfooding failure unless the rule is justified."
+    "(a) Run the full compliance block (SDLC.md §Compliance verification) with RELEASE=sdlc-bootstrap. Confirm exit 0. If item 2 (scratch install) fails: real bug. If item 6 (honest-status) fails: stale CERTIFIED claim or stale commit hash somewhere.",
+    "(b) `jq . .reviews/handoff-sdlc-bootstrap.json >/dev/null` — must succeed, no parse errors, no duplicate-key warnings.",
+    "(c) For each hash field in the handoff JSON: `git merge-base --is-ancestor $HASH HEAD` must return 0.",
+    "(d) `rg -n 'sdlc-wizard-wrap/[^.]' SDLC.md TESTING.md ARCHITECTURE.md CLAUDE.md README.md` — every hit must be in the context of the disabled state, not an 'active' claim.",
+    "(e) `rg -c '^test_[a-z0-9_]+$' tests/*.sh` — sum must be 94.",
+    "(f) `rg -nE '\\b(delve|game-changer|elevate|deep dive|navigate|seamlessly|comprehensive|robust|landscape)\\b' CLAUDE.md TESTING.md SDLC.md ARCHITECTURE.md` — no hits.",
+    "(g) Item 6 false-positive smoke test: temporarily inject `(sdlc-bootstrap CERTIFIED)` into a publishing doc (SDLC.md), re-run item 6, expect exit 1 with 'a publishing doc claims CERTIFIED'. Revert the injection. Confirms the check still works after the round-4 narrowing.",
+    "(h) Item 6 archive-immunity test: confirm `.reviews/codex-review-sdlc-bootstrap-r2.md` (which historically contains 'CERTIFIED after round 2' as quoted evidence) does NOT trip item 6, because the check is now scoped to publishing docs only."
   ],
-  "review_instructions": "Be strict. Prior Phase 1 review (handoff-phase-1.json, still PENDING_REVIEW round 1) flagged path-prefix swap + _find-gdlc-root.sh installation as P0 — those concerns are separate from this review (focus here is the 4 new SDLC docs). Priority concerns: (1) the hook-inventory claim in SDLC.md is the highest-value fact-check — if it's wrong, every subsequent command in the compliance block cascades from a false premise. (2) The test-assertion-count claim (94) — if reality differs, TESTING.md is lying and this loops back to Phase 1 review. (3) Blast-radius-tier exclusion of the 4 docs themselves is a dogfood check: does the bootstrap commit honor the policy it defines? If the policy exempts itself, either rewrite the policy or run a full Codex review loop on this commit (which is what's happening here — but verify the rule permits vs forbids).",
-  "preflight_path": "(none — this bootstrap skipped preflight since it's SDLC scaffolding, not a shipped-feature change. Flag if that's incorrect by the repo's own rules.)",
+  "review_instructions": "Round 4 is the recheck of the handoff structure itself plus the item 6 honest-status check fix and the lingering active-plugin claims. The previous three rounds revealed pattern: each fix introduced a new edge case. Be paranoid about dogfooding — the handoff is the input to its own review, so structural problems compound. Do not certify if the handoff fails its own item 6 check.",
+  "round_history": [
+    {
+      "round": 1,
+      "score": 5,
+      "verdict": "NEEDS_WORK",
+      "commit_at_review_time": "1ad9441",
+      "review_md": "codex-review-sdlc-bootstrap.md",
+      "findings_summary": "FAIL on hook count off-by-one, stale agentic-sdlc-wizard ref, broken compliance bash glob, blast-radius self-exemption. PASS on stat claim + upstream version + AI-slop. CONCERN on test execution (sandbox blocked).",
+      "fixes_landed_in": "0d7bfa5"
+    },
+    {
+      "round": 2,
+      "score": 6,
+      "verdict": "NEEDS_WORK",
+      "commit_at_review_time": "0d7bfa5",
+      "review_md": "codex-review-sdlc-bootstrap-r2.md",
+      "findings_summary": "(b) STILL_OPEN — wrap was disabled outside session, SDLC.md's active-plugin claim went stale. (g) NEW_ISSUE — `|| true` masked init failures. (j) NEW_ISSUE — review-machinery exemption let false CERTIFIED claim slip into ARCHITECTURE.md. Traceability: original 047fc83 not on HEAD; 0d7bfa5 is.",
+      "fixes_landed_in": "59c582b"
+    },
+    {
+      "round": 3,
+      "score": 6,
+      "verdict": "NEEDS_WORK",
+      "commit_at_review_time": "59c582b",
+      "review_md": "codex-review-sdlc-bootstrap-r3.md",
+      "findings_summary": "(b) STILL_OPEN — SDLC.md had 4 lingering active-plugin claims outside §Hooks (Wizard Version row + §Skills heading + References footer). (g) CLOSED — fail-fast structure works. (j) NEW_ISSUE — item 6 honest-status check has 4 bugs: (1) `// empty` only applied to last jq field; (2) grep too broad — matched archived review-machinery; (3) handoff JSON had duplicate `round_2_commit` keys; (4) compliance block read the stale duplicate.",
+      "fixes_landed_in": "round 4 (this iteration)"
+    }
+  ],
+  "round_4_recheck_focus": [
+    "SDLC.md §Wizard Version Tracking now says 'last loaded' not 'active', acknowledges DISABLED state explicitly.",
+    "SDLC.md §Skills available heading + intro now says 'formerly from the wrap plugin — currently disabled'.",
+    "SDLC.md §References footer description acknowledges DISABLED state of the wrap.",
+    "SDLC.md item 6 honest-status check: jq `// empty` per-field, grep scoped to PUBLISHING_DOCS array (excludes .reviews/* and .json), handles missing fields cleanly.",
+    "handoff-sdlc-bootstrap.json restructured to single-source-of-truth: no duplicate keys, round_history array tracks per-round fixes, commit field at top is the bootstrap commit, round_N_commit fields are the on-HEAD hashes per round.",
+    "Item 6 actually runs to PASS against current tree (verified locally before commit)."
+  ],
+  "preflight_path": ".reviews/preflight-sdlc-bootstrap.md",
   "artifact_path": ".reviews/"
 }
