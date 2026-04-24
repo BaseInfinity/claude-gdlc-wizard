@@ -1,0 +1,25 @@
+{
+  "description": "GDLC Wizard enforcement hooks",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/gdlc-prompt-check.sh"
+          }
+        ]
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/instructions-loaded-check.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

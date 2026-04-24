@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test CLI distribution tool (claude-gdlc-wizard)
-# Step-1 scope: CLI installs 4 skills + wizard doc + .gitignore entries.
-# Hooks and settings.json land in a later step — this suite does NOT cover them.
+# Scope: CLI installs settings.json + 3 hook files + 4 skills + wizard doc
+# + .gitignore entries. Tests run the real binary end-to-end.
 
 set -e
 
@@ -102,15 +102,85 @@ test_creates_all_files() {
     d=$(make_temp)
     (cd "$d" && node "$CLI" init >/dev/null 2>&1)
     local count=0
+    [ -f "$d/.claude/settings.json" ] && count=$((count + 1))
+    [ -f "$d/.claude/hooks/_find-gdlc-root.sh" ] && count=$((count + 1))
+    [ -f "$d/.claude/hooks/gdlc-prompt-check.sh" ] && count=$((count + 1))
+    [ -f "$d/.claude/hooks/instructions-loaded-check.sh" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc/SKILL.md" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc-setup/SKILL.md" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc-update/SKILL.md" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc-feedback/SKILL.md" ] && count=$((count + 1))
     [ -f "$d/CLAUDE_CODE_GDLC_WIZARD.md" ] && count=$((count + 1))
-    if [ "$count" -eq 5 ]; then
-        pass "init creates all 5 expected files (4 skills + wizard doc)"
+    if [ "$count" -eq 9 ]; then
+        pass "init creates all 9 expected files (settings + 3 hook files + 4 skills + wizard doc)"
     else
-        fail "init should create 5 files, found $count"
+        fail "init should create 9 files, found $count"
+    fi
+    rm -rf "$d"
+}
+
+test_hooks_executable() {
+    local d
+    d=$(make_temp)
+    (cd "$d" && node "$CLI" init >/dev/null 2>&1)
+    local ok=true
+    [ -x "$d/.claude/hooks/gdlc-prompt-check.sh" ] || ok=false
+    [ -x "$d/.claude/hooks/instructions-loaded-check.sh" ] || ok=false
+    if [ "$ok" = true ]; then
+        pass "init sets the 2 gdlc hook scripts executable"
+    else
+        fail "init should chmod +x gdlc-prompt-check.sh and instructions-loaded-check.sh"
+    fi
+    rm -rf "$d"
+}
+
+test_settings_json_valid_with_two_events() {
+    local d
+    d=$(make_temp)
+    (cd "$d" && node "$CLI" init >/dev/null 2>&1)
+    local hook_count
+    hook_count=$(python3 -c "
+import json
+with open('$d/.claude/settings.json') as f:
+    d = json.load(f)
+print(len(d.get('hooks', {})))
+" 2>/dev/null)
+    if [ "$hook_count" = "2" ]; then
+        pass "settings.json is valid JSON with 2 hook events (UserPromptSubmit + InstructionsLoaded)"
+    else
+        fail "settings.json should declare 2 hook events, got: $hook_count"
+    fi
+    rm -rf "$d"
+}
+
+test_settings_json_uses_project_dir() {
+    local d
+    d=$(make_temp)
+    (cd "$d" && node "$CLI" init >/dev/null 2>&1)
+    if grep -q 'CLAUDE_PROJECT_DIR' "$d/.claude/settings.json"; then
+        pass "settings.json uses \$CLAUDE_PROJECT_DIR (CLI mode)"
+    else
+        fail "settings.json should reference \$CLAUDE_PROJECT_DIR for hook paths"
+    fi
+    rm -rf "$d"
+}
+
+test_hook_content_is_gdlc_specific() {
+    local d
+    d=$(make_temp)
+    (cd "$d" && node "$CLI" init >/dev/null 2>&1)
+    local ok=true
+    grep -q "GDLC BASELINE" "$d/.claude/hooks/gdlc-prompt-check.sh" || ok=false
+    grep -q "gdlc-setup" "$d/.claude/hooks/gdlc-prompt-check.sh" || ok=false
+    grep -q "GDLC wizard file" "$d/.claude/hooks/instructions-loaded-check.sh" || ok=false
+    # Regression: no leftover SDLC markers
+    if grep -q "SDLC BASELINE\|setup-wizard\|SDLC.md" "$d/.claude/hooks/gdlc-prompt-check.sh"; then
+        ok=false
+    fi
+    if [ "$ok" = true ]; then
+        pass "Installed hooks are GDLC-specific (no stale SDLC markers)"
+    else
+        fail "Installed hooks should contain GDLC BASELINE/gdlc-setup and no SDLC leftovers"
     fi
     rm -rf "$d"
 }
@@ -266,8 +336,8 @@ test_check_match_on_fresh_install() {
     output=$(cd "$d" && node "$CLI" check 2>&1 || true)
     local match_count
     match_count=$(echo "$output" | grep -c "MATCH" || true)
-    # 4 skills + 1 wizard doc = 5 MATCH expected minimum
-    if [ "$match_count" -ge 5 ]; then
+    # settings + 3 hook files + 4 skills + 1 wizard doc + 1 .gitignore = 10 MATCH
+    if [ "$match_count" -ge 9 ]; then
         pass "check reports MATCH for fresh install ($match_count matches)"
     else
         fail "check should report MATCH for all fresh files, found $match_count"
@@ -323,6 +393,10 @@ test_no_args_shows_help
 test_unknown_command
 test_dry_run_no_files
 test_creates_all_files
+test_hooks_executable
+test_settings_json_valid_with_two_events
+test_settings_json_uses_project_dir
+test_hook_content_is_gdlc_specific
 test_dir_structure
 test_wizard_doc
 test_skill_frontmatter

@@ -1,0 +1,24 @@
+{
+  "name": "gdlc-wizard-marketplace",
+  "owner": {
+    "name": "Stefan Ayala",
+    "email": "stefan@baseinfinity.dev"
+  },
+  "metadata": {
+    "description": "GDLC enforcement plugin for AI-assisted game development",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "gdlc-wizard",
+      "source": ".",
+      "description": "GDLC enforcement for AI agents — persona-driven playtest cycles, triangulated findings, ratchet-only-tightens. Sibling to sdlc-wizard, for games instead of code.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Stefan Ayala"
+      },
+      "category": "productivity",
+      "tags": ["gdlc", "game-dev", "playtest", "persona", "ai-agent"]
+    }
+  ]
+}

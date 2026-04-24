@@ -8,19 +8,72 @@ const RESET = '\x1b[0m';
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
 const YELLOW = '\x1b[33m';
+const MAGENTA = '\x1b[35m';
 const CYAN = '\x1b[36m';
 
 const REPO_ROOT = path.join(__dirname, '..');
+const TEMPLATES_DIR = path.join(__dirname, 'templates');
 const WIZARD_DOC = path.join(REPO_ROOT, 'CLAUDE_CODE_GDLC_WIZARD.md');
 
+// Skills and hooks live at repo root (single source of truth for both plugin
+// and CLI). settings.json is CLI-specific — lives under cli/templates/.
 const FILES = [
+  { src: 'settings.json', dest: '.claude/settings.json', base: TEMPLATES_DIR },
+  { src: 'hooks/_find-gdlc-root.sh', dest: '.claude/hooks/_find-gdlc-root.sh', base: REPO_ROOT },
+  { src: 'hooks/gdlc-prompt-check.sh', dest: '.claude/hooks/gdlc-prompt-check.sh', executable: true, base: REPO_ROOT },
+  { src: 'hooks/instructions-loaded-check.sh', dest: '.claude/hooks/instructions-loaded-check.sh', executable: true, base: REPO_ROOT },
   { src: 'skills/gdlc/SKILL.md', dest: '.claude/skills/gdlc/SKILL.md', base: REPO_ROOT },
   { src: 'skills/gdlc-setup/SKILL.md', dest: '.claude/skills/gdlc-setup/SKILL.md', base: REPO_ROOT },
   { src: 'skills/gdlc-update/SKILL.md', dest: '.claude/skills/gdlc-update/SKILL.md', base: REPO_ROOT },
   { src: 'skills/gdlc-feedback/SKILL.md', dest: '.claude/skills/gdlc-feedback/SKILL.md', base: REPO_ROOT },
 ];
 
+// Match hook entries by the installed script basename so a user-customized
+// settings.json with other hooks doesn't get clobbered.
+const WIZARD_HOOK_MARKERS = FILES
+  .filter((f) => f.executable && f.dest.startsWith('.claude/hooks/'))
+  .map((f) => path.basename(f.src));
+
 const GITIGNORE_ENTRIES = ['.claude/plans/', '.claude/settings.local.json'];
+
+function isWizardHookEntry(hookEntry) {
+  if (!hookEntry || !hookEntry.hooks) return false;
+  return hookEntry.hooks.some((h) =>
+    WIZARD_HOOK_MARKERS.some((marker) => h.command && h.command.includes(marker))
+  );
+}
+
+function mergeSettings(existingPath, templatePath, force) {
+  try {
+    const existing = JSON.parse(fs.readFileSync(existingPath, 'utf8'));
+    const template = JSON.parse(fs.readFileSync(templatePath, 'utf8'));
+
+    if (!existing.hooks) existing.hooks = {};
+
+    for (const [event, templateEntries] of Object.entries(template.hooks || {})) {
+      if (!existing.hooks[event]) {
+        existing.hooks[event] = templateEntries;
+        continue;
+      }
+
+      // Each template event has exactly one wizard hook entry.
+      const templateEntry = templateEntries[0];
+      const existingIdx = existing.hooks[event].findIndex(isWizardHookEntry);
+
+      if (existingIdx === -1) {
+        existing.hooks[event].push(templateEntry);
+      } else if (force) {
+        existing.hooks[event][existingIdx] = templateEntry;
+      }
+    }
+
+    const merged = JSON.stringify(existing, null, 2) + '\n';
+    const original = fs.readFileSync(existingPath, 'utf8');
+    return merged === original ? null : merged;
+  } catch (_) {
+    return null;
+  }
+}
 
 function planOperations(targetDir, { force }) {
   const ops = [];
@@ -29,11 +82,29 @@ function planOperations(targetDir, { force }) {
     const destPath = path.join(targetDir, file.dest);
     const srcPath = path.join(file.base, file.src);
     const exists = fs.existsSync(destPath);
+
+    if (exists && file.dest === '.claude/settings.json') {
+      const merged = mergeSettings(destPath, srcPath, force);
+      if (merged) {
+        ops.push({
+          src: srcPath,
+          dest: destPath,
+          relativeDest: file.dest,
+          action: 'MERGE',
+          mergedContent: merged,
+          executable: false,
+        });
+        continue;
+      }
+      // Invalid JSON or no-op merge → fall through to SKIP/OVERWRITE.
+    }
+
     ops.push({
       src: srcPath,
       dest: destPath,
       relativeDest: file.dest,
       action: exists ? (force ? 'OVERWRITE' : 'SKIP') : 'CREATE',
+      executable: file.executable || false,
     });
   }
 
@@ -44,6 +115,7 @@ function planOperations(targetDir, { force }) {
     dest: wizardDest,
     relativeDest: 'CLAUDE_CODE_GDLC_WIZARD.md',
     action: wizardExists ? (force ? 'OVERWRITE' : 'SKIP') : 'CREATE',
+    executable: false,
   });
 
   return ops;
@@ -57,7 +129,14 @@ function executeOperations(ops) {
   for (const op of ops) {
     if (op.action === 'SKIP') continue;
     ensureDir(op.dest);
-    fs.copyFileSync(op.src, op.dest);
+    if (op.action === 'MERGE') {
+      fs.writeFileSync(op.dest, op.mergedContent);
+    } else {
+      fs.copyFileSync(op.src, op.dest);
+    }
+    if (op.executable) {
+      fs.chmodSync(op.dest, 0o755);
+    }
   }
 }
 
@@ -84,6 +163,7 @@ function printOps(ops) {
   for (const op of ops) {
     const color = op.action === 'CREATE' ? GREEN
       : op.action === 'SKIP' ? YELLOW
+      : op.action === 'MERGE' ? MAGENTA
       : CYAN;
     console.log(`  ${color}${op.action}${RESET}  ${op.relativeDest}`);
   }
@@ -123,7 +203,7 @@ function init(targetDir, { force = false, dryRun = false } = {}) {
   console.log(`
 ${GREEN}GDLC Wizard installed successfully!${RESET}
 
-${YELLOW}Restart Claude Code${RESET} to load new skills:
+${YELLOW}Restart Claude Code${RESET} to load new hooks and skills:
   ${CYAN}/exit${RESET} then ${CYAN}claude --continue${RESET}  (keeps conversation history)
   ${CYAN}/exit${RESET} then ${CYAN}claude${RESET}              (fresh start)
 
@@ -139,16 +219,27 @@ The wizard doc is at: CLAUDE_CODE_GDLC_WIZARD.md
   return true;
 }
 
-function checkFile(srcPath, destPath, relativeDest) {
+function checkFile(srcPath, destPath, relativeDest, shouldBeExecutable) {
   if (!fs.existsSync(destPath)) {
     return { file: relativeDest, status: 'MISSING' };
   }
   const srcHash = crypto.createHash('sha256').update(fs.readFileSync(srcPath)).digest('hex');
   const destHash = crypto.createHash('sha256').update(fs.readFileSync(destPath)).digest('hex');
-  return {
+  const result = {
     file: relativeDest,
     status: srcHash === destHash ? 'MATCH' : 'CUSTOMIZED',
   };
+
+  if (shouldBeExecutable) {
+    try {
+      fs.accessSync(destPath, fs.constants.X_OK);
+    } catch (_) {
+      result.status = 'DRIFT';
+      result.details = 'Missing executable permission (chmod +x)';
+    }
+  }
+
+  return result;
 }
 
 function checkGitignore(gitignorePath) {
@@ -171,11 +262,11 @@ function check(targetDir, { json = false } = {}) {
   for (const file of FILES) {
     const destPath = path.join(targetDir, file.dest);
     const srcPath = path.join(file.base, file.src);
-    results.push(checkFile(srcPath, destPath, file.dest));
+    results.push(checkFile(srcPath, destPath, file.dest, file.executable || false));
   }
 
   const wizardDest = path.join(targetDir, 'CLAUDE_CODE_GDLC_WIZARD.md');
-  results.push(checkFile(WIZARD_DOC, wizardDest, 'CLAUDE_CODE_GDLC_WIZARD.md'));
+  results.push(checkFile(WIZARD_DOC, wizardDest, 'CLAUDE_CODE_GDLC_WIZARD.md', false));
 
   const gitignorePath = path.join(targetDir, '.gitignore');
   results.push(checkGitignore(gitignorePath));

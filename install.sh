@@ -77,10 +77,10 @@ else
     info "Installing GDLC Wizard to current project..."
     npx -y claude-gdlc-wizard init
 
-    if [ -f ".claude/skills/gdlc/SKILL.md" ]; then
+    if [ -f ".claude/hooks/gdlc-prompt-check.sh" ]; then
         echo ""
         echo -e "${GREEN}Installed successfully${RESET}"
-        echo "Restart Claude Code to activate the skills: type /exit then claude"
+        echo "Restart Claude Code to activate hooks: type /exit then claude"
     else
         error "Installation completed but wizard files not found. Check output above for errors"
     fi
