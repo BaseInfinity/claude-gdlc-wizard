@@ -93,7 +93,7 @@ Validates `install.sh` without executing `curl | bash`. Covers:
 - Shebang is clean bytes (no escaped-bang, no BOM — `xxd` check)
 - `--global` flag wired up
 - Node ≥ 18 preflight
-- No residual `agentic-sdlc-wizard` / `claude-sdlc-wizard` references
+- No legacy SDLC package-name leakage (the install script must reference only `claude-gdlc-wizard`, never the SDLC sibling's package names — guarded by a denylist grep in the test, not enumerated in this doc)
 - At least one `claude-gdlc-wizard` reference
 - Live-install path gated behind `CLAUDE_GDLC_WIZARD_NPM_PUBLISHED=1` (package isn't on npm yet — flip the gate after publish to enable the end-to-end test)
 

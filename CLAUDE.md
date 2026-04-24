@@ -50,7 +50,8 @@ All tests are bash, run directly. `package.json` intentionally has no `scripts` 
 | `bash tests/test-plugin.sh` | Plugin/CLI parity (plugin.json + marketplace.json validity, hooks.json events, path-prefix split, 20 assertions) |
 | `bash tests/test-skill-contracts.sh` | Prove-It-Gate contract tests across all 4 skills + wizard doc (21 assertions) |
 | `node cli/bin/gdlc-wizard.js --help` | Inspect the CLI surface |
-| `node cli/bin/gdlc-wizard.js init` | Dry-run the install (use a scratch dir) |
+| `node cli/bin/gdlc-wizard.js init --dry-run` | Print the install plan without writing (safe to run anywhere) |
+| `cd $(mktemp -d) && node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js init` | Real install in a throwaway scratch dir |
 
 ## Code Style
 

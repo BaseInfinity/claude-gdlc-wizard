@@ -47,9 +47,14 @@ claude-gdlc-wizard/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml             — runs tests/*.sh on push + PR
+├── .gitignore                 — node_modules, build artifacts, .claude/plans/, .claude/settings.local.json
 ├── .reviews/
-│   ├── preflight-phase-1.md   — self-review for the Phase 1 bootstrap
-│   └── handoff-phase-1.json   — Codex cross-model handoff (PENDING_REVIEW)
+│   ├── preflight-phase-1.md         — self-review for the Phase 1 bootstrap
+│   ├── handoff-phase-1.json         — Codex cross-model handoff (PENDING_REVIEW)
+│   ├── preflight-sdlc-bootstrap.md  — retroactive self-review for the SDLC self-install
+│   ├── handoff-sdlc-bootstrap.json  — Codex handoff for the SDLC self-install (CERTIFIED after round 2)
+│   ├── codex-review-sdlc-bootstrap.md  — Codex round 1 verdict (NEEDS_WORK 5/10) + round 2 fixes
+│   └── codex-review-sdlc-bootstrap.log — full Codex transcript
 ├── cli/
 │   ├── bin/gdlc-wizard.js     — CLI entry: --help/--version/init/check, flag parser
 │   ├── init.js                — install logic: FILES array, mergeSettings, gitignore, check
