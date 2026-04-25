@@ -51,11 +51,19 @@ SDLC on this repo keeps the distribution machinery honest. GDLC is not consumed 
 - Round 1 = handoff, round 2+ = recheck after fixes. Not one-shot — it's a dialogue
 - Score ≥ 7 is the bar; anything less = another round
 
-## Hooks active on this repo
+## Hooks (current state — no active SDLC plugin)
 
-These come from the globally-enabled `sdlc-wizard@sdlc-wizard-local` plugin (v1.30.0 at `~/.claude/plugins-local/sdlc-wizard-wrap/plugins/sdlc-wizard/hooks/`). They fire in every directory without per-repo wiring.
+**As of 2026-04-24 16:33 PDT, the global `sdlc-wizard-wrap` plugin is disabled.** The wrap dir was renamed to `~/.claude/plugins-local/.sdlc-wizard-wrap.disabled-2026-04-24/` outside this session. New Claude Code sessions in this repo will not load any SDLC enforcement hooks.
 
-The plugin's `hooks/` dir contains **5 entries**: 4 executable hook scripts plus the `hooks.json` plugin manifest that registers them. All 5 ship together; only the 4 scripts are described below.
+What this means in practice:
+
+- **Hook enforcement is off.** No `UserPromptSubmit` / `InstructionsLoaded` / `PreToolUse` script fires for SDLC discipline on this repo's development.
+- **The discipline still applies** — it's just doc-driven and test-driven now, not hook-driven. The compliance gate is `tests/*.sh` (94 assertions, CI-enforced) + this file's verification block + Codex cross-model review on every release.
+- **In-session behavior may differ** — Claude Code can keep the previously-loaded hook in memory for the lifetime of an open session, so prompts still see `SDLC BASELINE` reminders until session restart.
+
+If you want to restore active hook enforcement, rename the wrap back (`mv .sdlc-wizard-wrap.disabled-2026-04-24 sdlc-wizard-wrap`) and start a new session. See `~/.claude/projects/-Users-stefanayala/memory/reference_sdlc_wizard_wrap.md` for the wrap mechanics.
+
+### What the wrap shipped (for reference)
 
 | Hook script | Event | Purpose |
 |-------------|-------|---------|
@@ -64,9 +72,9 @@ The plugin's `hooks/` dir contains **5 entries**: 4 executable hook scripts plus
 | `tdd-pretool-check.sh` | `PreToolUse` (Write/Edit/MultiEdit) | TDD reminder when editing implementation files |
 | `_find-sdlc-root.sh` | sourced by others | Walk-up helper to locate project root |
 
-(The fifth entry, `hooks.json`, is the plugin-format manifest — same role as `hooks/hooks.json` in this repo, which registers the GDLC equivalents.)
+(Plus `hooks.json`: plugin-format manifest registering the 4 scripts. The wrap dir contained 5 entries total.)
 
-**Not installed (missing from v1.30.0):** `precompact-seam-check.sh` (PreCompact block mid-review/rebase), `model-effort-check.sh` (upgrade nudge). Added in upstream v1.32+. To get them, rsync upstream into the wrap dir per the reference memory.
+**Not installed (missing from v1.30.0):** `precompact-seam-check.sh` (PreCompact block mid-review/rebase), `model-effort-check.sh` (upgrade nudge). Added in upstream v1.32+.
 
 ## Skills available (from the global plugin)
 
@@ -103,10 +111,14 @@ for t in tests/*.sh; do bash "$t"; done
 
 # 2. `check` reports no drift in a SCRATCH consumer install (this repo is the distribution, not a consumer — running `check` here legitimately reports MISSING).
 SCRATCH="$(mktemp -d)"
-( cd "$SCRATCH" && node "$REPO/cli/bin/gdlc-wizard.js" init >/dev/null \
-                 && node "$REPO/cli/bin/gdlc-wizard.js" check --json | jq -e '.[] | select(.status != "MATCH")' >/dev/null \
-                 && { echo "drift detected in scratch install"; exit 1; } || true )
-rm -rf "$SCRATCH"
+trap 'rm -rf "$SCRATCH"' EXIT
+( cd "$SCRATCH" && node "$REPO/cli/bin/gdlc-wizard.js" init >/dev/null )   # fail-fast on init error
+DRIFT="$( cd "$SCRATCH" && node "$REPO/cli/bin/gdlc-wizard.js" check --json | jq -r '.[] | select(.status != "MATCH") | .path' )"
+if [ -n "$DRIFT" ]; then
+  echo "drift detected in scratch install:"
+  printf '  %s\n' $DRIFT
+  exit 1
+fi
 
 # 3. Preflight present for this release (named, not globbed).
 test -f "$REPO/.reviews/preflight-${RELEASE}.md" \
@@ -120,11 +132,32 @@ test -f "$REPO/.reviews/handoff-${RELEASE}.json" \
 MSG="$(git -C "$REPO" log -1 --pretty=%B)"
 printf '%s' "$MSG" | grep -qE '^(feat|fix|docs|test|chore|refactor)\(' \
   || { echo "tip commit lacks conventional-commit prefix"; exit 1; }
-printf '%s' "$MSG" | grep -qE 'Co-Authored-By.*Claude|Generated with.*Claude' \
-  && { echo "tip commit contains AI attribution footer"; exit 1; } || true
+if printf '%s' "$MSG" | grep -qE 'Co-Authored-By.*Claude|Generated with.*Claude'; then
+  echo "tip commit contains AI attribution footer"; exit 1
+fi
+
+# 6. Honest-status check on review artifacts referenced anywhere in the working tree.
+#    No CERTIFIED claim while the underlying handoff is PENDING_*. No commit-hash citation
+#    that isn't an ancestor of HEAD (covers the auto-amend behavior where original commit
+#    hashes get rewritten by the post-commit hook chain).
+for HANDOFF in "$REPO"/.reviews/handoff-*.json; do
+  [ -f "$HANDOFF" ] || continue
+  STATUS="$(jq -r '.status' "$HANDOFF")"
+  NAME="$(basename "$HANDOFF" .json | sed 's/^handoff-//')"
+  if [ "$STATUS" != "CERTIFIED" ] && grep -RqE "${NAME}.*CERTIFIED" "$REPO" --include='*.md' --include='*.json' 2>/dev/null; then
+    echo "honest-status fail: $HANDOFF is $STATUS but a doc claims CERTIFIED"; exit 1
+  fi
+  for HASH in $(jq -r '.commit, .round_2_commit, .round_3_commit // empty' "$HANDOFF" 2>/dev/null); do
+    [ -z "$HASH" ] && continue
+    git -C "$REPO" merge-base --is-ancestor "$HASH" HEAD 2>/dev/null \
+      || { echo "honest-status fail: $HANDOFF cites $HASH not on HEAD"; exit 1; }
+  done
+done
 
 echo "compliance: PASS for release ${RELEASE}"
 ```
+
+**On commit-hash auto-amend:** `~/.afterhours/hooks/post-commit` rewrites every commit immediately after creation in this dev environment. Original hashes (e.g. `04fe06d`) are not on `main`; only the amended versions (e.g. `70dfcf9`) are. When citing a commit in a handoff or doc, always re-resolve the hash post-commit (`git rev-parse HEAD`) — never assume the hash you saw at `git commit` time is the one on `main`. The honest-status check above guards against this drift.
 
 Run as: `RELEASE=sdlc-bootstrap bash -c "<block>"`. Substitute the release tag for the work you're verifying.
 
@@ -136,7 +169,7 @@ Changes in this repo affect consumer installs the moment they publish. Default: 
 - **tests/** / **.github/workflows/** → affects CI honesty → requires preflight + Codex round (a broken test gate is worse than a broken feature, because it hides everything else)
 - **README.md** / **CHANGELOG.md** / **CLAUDE_CODE_GDLC_WIZARD.md** → consumer-facing docs → requires preflight + honest-language audit (no AI slop) + Codex round if any factual claim changes
 - **SDLC.md** / **TESTING.md** / **ARCHITECTURE.md** / **CLAUDE.md** → these *are* the quality gate, so changes here require preflight + Codex round (no self-exemption — the policy-defining files get the same scrutiny as everything else; a lie in here invalidates every downstream check)
-- **`.reviews/preflight-*.md`** / **`.reviews/handoff-*.json`** / **`.reviews/codex-review-*.md`** / this file's own typo-class fixes → standard review (these are the review machinery itself; demanding meta-review of the meta-review creates an infinite regress)
+- **`.reviews/preflight-*.md`** / **`.reviews/handoff-*.json`** / **`.reviews/codex-review-*.md`** / this file's own typo-class fixes → standard review (these are the review machinery itself; full Codex round on every review-machinery edit creates infinite regress). **But:** every change to a `.reviews/` artifact must pass an honest-status check before commit — no claim of `CERTIFIED` status when the underlying handoff JSON's `status` field is `PENDING_REVIEW` or `PENDING_RECHECK`, no commit-hash citation that isn't an ancestor of `HEAD`. The honest-status check is in the compliance verification block above (item 6).
 
 ## References
 

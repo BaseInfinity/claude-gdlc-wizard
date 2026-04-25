@@ -1,7 +1,16 @@
 {
   "review_id": "sdlc-bootstrap-001",
   "status": "PENDING_RECHECK",
-  "round": 2,
+  "round": 3,
+  "round_2_commit_actual": "0d7bfa5 (was originally 047fc83 at git commit time; amended by ~/.afterhours/hooks/post-commit immediately after — only 0d7bfa5 is on main)",
+  "round_3_fixes_applied": [
+    "(b) HOOK INVENTORY STILL_OPEN: SDLC.md §Hooks rewritten to honestly reflect the 2026-04-24 16:33 plugin disable. The wrap was renamed to ~/.claude/plugins-local/.sdlc-wizard-wrap.disabled-2026-04-24/ outside this session, so any 'active plugin' claim was factually wrong. New framing: hook enforcement is OFF; discipline is doc-driven and test-driven now (tests + Codex review + verification block remain).",
+    "(g) COMPLIANCE BLOCK NEW_ISSUE: The scratch check's `&& ... || true` chain masked init/check failures. Refactored to a fail-fast init followed by an explicit DRIFT capture; non-empty DRIFT prints the offending paths and exits 1. Added trap to clean up scratch dir on any exit.",
+    "(j) BLAST-RADIUS NEW_ISSUE: review-machinery exemption was too broad; it let me write 'CERTIFIED after round 2' in ARCHITECTURE.md while the handoff was PENDING_RECHECK. Tightened: review-machinery edits skip the full Codex round but MUST pass an honest-status check (no false CERTIFIED claims, no commit-hash citations not on HEAD). Implemented as item 6 in the compliance block.",
+    "CROSS-DOC FIX 2 NEW_ISSUE: ARCHITECTURE.md tree's '.reviews/' enumeration was both incomplete (missing r2 prompt/log) and falsely annotated (CERTIFIED). Rewrote as a glob-pattern listing that points to the live directory rather than enumerating, so it doesn't go stale every round.",
+    "TRACEABILITY ISSUE: This handoff now records the actual on-HEAD hash for round 2 (0d7bfa5). Documented the auto-amend behavior in SDLC.md §Compliance verification 'On commit-hash auto-amend' — citations must be re-resolved post-commit because ~/.afterhours/hooks/post-commit rewrites every commit immediately."
+  ],
+  "round_3_caveat_on_environment": "The Codex sandbox (read-only) cannot run `git checkout -- hooks/` because that requires creating .git/index.lock. The reviewer can therefore not run the test suite end-to-end. Use the falsifiable proxy: `rg -c '^test_[a-z0-9_]+$' tests/*.sh` should sum to 94. The full suite was run green (94/94) here in the local dev environment immediately before commit.",
   "fixes_applied": [
     "(b) HOOK INVENTORY: SDLC.md §Hooks active rewritten — explicit '5 entries = 4 scripts + 1 manifest' framing. The wrap dir count is 5 (not 4), and hooks.json is the plugin manifest.",
     "(f) STALE SDLC REFS: TESTING.md:96 replaced stale-package-name enumeration with abstract rule ('legacy SDLC package-name leakage'). The doc no longer literally contains 'agentic-sdlc-wizard'.",
