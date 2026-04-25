@@ -17,9 +17,9 @@ GDLC ships through `BaseInfinity/claude-gdlc-wizard`. Four parallel install chan
 3. **Claude Code plugin** — install via the plugin marketplace using `.claude-plugin/plugin.json`. Hooks resolve through `${CLAUDE_PLUGIN_ROOT}` instead of `$CLAUDE_PROJECT_DIR`.
 4. **Manual git clone + `node cli/bin/gdlc-wizard.js init`** — fallback when npm/npx is unavailable (corp proxy blocks the registry, npm not installed alongside Node, etc.). Still requires Node 18+.
 
-The skills still read playbook content from a sibling `~/gdlc/` repo (mirror of `BaseInfinity/gdlc`). Path A (consolidate the playbook into this distribution repo) is under user consideration; Path B (sibling kept) is the v0.1.0 default — framework updates flow through `~/gdlc/` independently of wizard releases.
+**Path A consolidation (v0.2.0, 2026-04-25):** the framework playbook (`GDLC.md`, `ROADMAP.md`, `FEEDBACK_SKILL_SPEC.md`, `PLAYBOOK_CHANGELOG.md`) now lives in this repo's root. `BaseInfinity/gdlc` is deprecated. Same single-repo pattern SDLC uses.
 
-**Sibling repo prerequisite.** Both setup and update assume `~/gdlc/` exists and is on a clean working tree. If missing:
+**Sibling-clone still required transitionally.** Skills (`gdlc-update`, `gdlc-feedback`) still read from `~/gdlc/` for runtime drift detection / fetch URLs / issue tracker. The behavioral migration to local-repo paths is queued for v0.2.x. Until that ships, both setup and update still assume `~/gdlc/` exists. If missing:
 
 ```bash
 git clone https://github.com/BaseInfinity/gdlc ~/gdlc

@@ -141,11 +141,13 @@ Every significant release ships with `preflight-<release>.md` (self-review) and 
 
 ## Key decisions
 
-### Sibling-dependency retained (Path B default for v0.1.0)
+### Path A consolidation (v0.2.0, 2026-04-25)
 
-Skills read `~/gdlc/` at runtime for playbook content (GDLC.md, CHANGELOG.md, FEEDBACK_SKILL_SPEC.md). Not bundled, not vendored. Rationale: the playbook is an **evolving source of truth** tied to case studies; bundling it into the wizard means version drift the moment ~/gdlc/ updates. The downside is an extra clone step (`git clone ...gdlc ~/gdlc`).
+Framework playbook (`GDLC.md`, `ROADMAP.md`, `FEEDBACK_SKILL_SPEC.md`, `PLAYBOOK_CHANGELOG.md`) lives in this repo's root. Same single-repo pattern SDLC uses (`claude-sdlc-wizard` is the only SDLC repo — there's no separate `~/sdlc/` framework repo).
 
-**Path A** (consolidate `~/gdlc/` into this repo and archive `BaseInfinity/gdlc`) is under user consideration. Decision not made yet; flagged in ROADMAP §1.4. If Path A wins, the skills' `~/gdlc/` reads collapse to local-repo reads, and the framework content ships alongside the distribution.
+`BaseInfinity/gdlc` is deprecated as of `cbe57ed` (2026-04-25); it carries a `DEPRECATED.md` pointer to this repo. GitHub-archive of that repo is gated on completion of the skill behavioral migration (next paragraph).
+
+**Pending transitional state (skill migration queued for v0.2.x):** skills' runtime references to `~/gdlc/` haven't all flipped to local-repo paths yet. `gdlc-update` still does drift detection against `~/gdlc/.claude/skills/`, `gdlc-feedback` still files issues at `BaseInfinity/gdlc/issues`, etc. Both `~/gdlc/` (legacy clone) and `~/claude-gdlc-wizard/` work transitionally. The migration commit will collapse the runtime references to single-repo paths and deprecate the legacy clone requirement.
 
 ### Plugin-mode vs CLI-mode path-prefix split
 

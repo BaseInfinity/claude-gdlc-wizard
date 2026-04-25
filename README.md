@@ -8,7 +8,7 @@ This wizard installs the GDLC skill suite into any Claude Code project: persona-
 
 ## Status
 
-**Experimental (v0.1.0).** Extracted from [BaseInfinity/gdlc](https://github.com/BaseInfinity/gdlc) on 2026-04-23. Case studies to date:
+**Shipped (v0.2.0, 2026-04-25).** Phase 1 CERTIFIED; framework playbook consolidated into this repo (Path A). Originally extracted from [BaseInfinity/gdlc](https://github.com/BaseInfinity/gdlc) on 2026-04-23 (now deprecated, see [DEPRECATED.md](https://github.com/BaseInfinity/gdlc/blob/main/DEPRECATED.md)). Case studies to date:
 
 - **#1 codeguesser** — 17 playtests, 355+ regression tests, 26 earned rules (complete)
 - **#2 pdlc/TamAGI** — consuming now
@@ -29,13 +29,15 @@ This wizard installs the GDLC skill suite into any Claude Code project: persona-
 
 Pick whichever fits your environment. All four paths land the same surface: 4 skills + 2 hooks + helper + settings.json + wizard doc.
 
-### Prerequisite (every path): clone the framework sibling
+### Prerequisite (every path, transitional): clone the legacy framework sibling
 
-The skills read playbook content from a sibling `~/gdlc/` repo. Clone it once:
+> **Path A status:** the playbook now lives in this repo's root (`GDLC.md`). The skills still read `~/gdlc/` at runtime for drift detection + CHANGELOG fetch URLs + issue tracker — that behavioral migration is queued for v0.2.x. Until it ships, the legacy sibling clone is still required:
 
 ```bash
 git clone https://github.com/BaseInfinity/gdlc ~/gdlc
 ```
+
+Once skills migrate to local-repo paths, this step becomes optional, then is removed entirely. Track progress in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ### Path 1 — `npx` (recommended)
 
