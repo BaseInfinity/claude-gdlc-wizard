@@ -41,7 +41,7 @@ The **testing diamond still applies** — just re-scoped:
                     └────────────────────────┘
                 ┌──────────────────────────────────┐
                 │   Integration (the bulk)          │  real tmpdirs, real hooks,
-                │   — 5 bash suites, 94 assertions  │  real JSON validity, zero mocks
+                │   — 5 bash suites, 96 assertions  │  real JSON validity, zero mocks
                 └──────────────────────────────────┘
             ┌──────────────────────────────────────────┐
             │   Contract / Prove-It-Gate (wide base)    │  liveness-checked contracts
@@ -54,9 +54,9 @@ Mocking rule: **none**. Tests run the actual binary against actual filesystems, 
 
 ## Test suites
 
-5 suites, 94 assertions total. Each file is independently runnable (`bash tests/<name>.sh`).
+5 suites, 96 assertions total. Each file is independently runnable (`bash tests/<name>.sh`).
 
-### tests/test-cli.sh (22 assertions — CLI integration)
+### tests/test-cli.sh (24 assertions — CLI integration)
 
 Runs the real `cli/bin/gdlc-wizard.js` binary. Covers:
 
@@ -134,7 +134,7 @@ git checkout -- hooks/
 # All 5 suites sequentially, stop on first failure
 for t in tests/*.sh; do echo "--- $t"; bash "$t" || break; done
 
-# Expected: "All tests passed" from each, 94 total assertions, 0 failures
+# Expected: "All tests passed" from each, 96 total assertions, 0 failures
 ```
 
 ---

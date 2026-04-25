@@ -160,10 +160,10 @@ Otherwise, write `GDLC.md` at the project root from the template in `CLAUDE_CODE
 The metadata comments from the template are already filled. Verify the full five-line canonical block appears in `GDLC.md` header:
 
 ```markdown
-<!-- GDLC Wizard Version: X.Y.Z -->
-<!-- GDLC Sibling SHA: <sha> -->
-<!-- GDLC Setup Date: <date> -->
-<!-- GDLC Last Update: <date> -->
+<!-- GDLC Wizard Version: <VERSION_FROM_CHANGELOG> -->
+<!-- GDLC Sibling SHA: <SHORT_SHA> -->
+<!-- GDLC Setup Date: <YYYY-MM-DD> -->
+<!-- GDLC Last Update: <YYYY-MM-DD> -->
 <!-- Completed Steps: step-0.1, step-0.2, step-1, step-2, step-3, step-4, step-5, step-6, step-7 -->
 ```
 

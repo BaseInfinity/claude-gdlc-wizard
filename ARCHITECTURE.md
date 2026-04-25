@@ -19,7 +19,7 @@
  │   install.sh  ◀─── curl|bash bootstrap → npx claude-gdlc-wizard        │
  │   .claude-plugin/  ◀─── plugin.json + marketplace.json                 │
  │   CLAUDE_CODE_GDLC_WIZARD.md  ◀─── canonical wizard doc (shipped)      │
- │   tests/      ◀─── 5 bash suites, 94 assertions, CI-gated              │
+ │   tests/      ◀─── 5 bash suites, 96 assertions, CI-gated              │
  │   .reviews/   ◀─── per-release preflight + Codex handoff               │
  └──────────────────────────────┬─────────────────────────────────────────┘
                                 │  distribution channels
@@ -70,7 +70,7 @@ claude-gdlc-wizard/
 │   ├── gdlc-update/SKILL.md       — CHANGELOG diff, drift detection, per-file apply
 │   └── gdlc-feedback/SKILL.md     — structured upstream issues (stock labels + canonical types)
 ├── tests/
-│   ├── test-cli.sh            — CLI integration  (22 assertions)
+│   ├── test-cli.sh            — CLI integration  (24 assertions)
 │   ├── test-hooks.sh          — hook behavior    (13 assertions)
 │   ├── test-install-script.sh — install.sh      (18 assertions)
 │   ├── test-plugin.sh         — plugin + CLI parity (20 assertions)
@@ -121,7 +121,7 @@ Node 18+, CommonJS, zero runtime deps. Two files do the real work:
 
 ### `tests/` (the compliance gate)
 
-5 bash suites, 94 assertions, integration-heavy, zero mocks. See `TESTING.md` for the per-suite breakdown. CI runs all 5 on every push + PR.
+5 bash suites, 96 assertions, integration-heavy, zero mocks. See `TESTING.md` for the per-suite breakdown. CI runs all 5 on every push + PR.
 
 ### `.reviews/` (per-release QA)
 

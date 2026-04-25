@@ -1,4 +1,4 @@
-#\!/bin/bash
+#!/usr/bin/env bash
 # InstructionsLoaded hook — validates GDLC files exist at session start.
 # Fires when Claude loads instructions (session start / resume).
 # Available since Claude Code v2.1.69.

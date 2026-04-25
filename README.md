@@ -25,30 +25,51 @@ This wizard installs the GDLC skill suite into any Claude Code project: persona-
 | `/gdlc-update` | periodically | Reads CHANGELOG, shows rule diffs, runs drift detection on managed files, applies updates selectively while preserving your `GDLC.md` |
 | `/gdlc-feedback` | when you hit a gap | Files structured issues upstream to [BaseInfinity/gdlc](https://github.com/BaseInfinity/gdlc) — earned-rule candidates, playbook gaps, wizard bugs, methodology questions. Stock GitHub labels. |
 
-## Install (v0 — git clone, manual)
+## Install
 
-This is the v0 install path. `npm i -g` / `brew install` / `npx` are on the roadmap.
+Pick whichever fits your environment. All four paths land the same surface: 4 skills + 2 hooks + helper + settings.json + wizard doc.
 
-### Prerequisite: clone the framework sibling
+### Prerequisite (every path): clone the framework sibling
 
-The skills read from a sibling `~/gdlc/` repo (the playbook source of truth). Clone it:
+The skills read playbook content from a sibling `~/gdlc/` repo. Clone it once:
 
 ```bash
 git clone https://github.com/BaseInfinity/gdlc ~/gdlc
 ```
 
-### Install the wizard skills into your project
+### Path 1 — `npx` (recommended)
 
 From your game project root:
 
 ```bash
+npx -y claude-gdlc-wizard init
+```
+
+That installs everything under `.claude/` and writes `CLAUDE_CODE_GDLC_WIZARD.md` to project root. Re-run any time — idempotent. `--force` overwrites; `--dry-run` previews.
+
+### Path 2 — `curl | bash`
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/install.sh | bash
+```
+
+Wraps the `npx` flow with Node ≥ 18 preflight + download guard.
+
+### Path 3 — Claude Code plugin
+
+Use the Claude Code plugin marketplace mechanism (see Anthropic docs) to install the plugin defined at `.claude-plugin/plugin.json`. Hooks resolve through `${CLAUDE_PLUGIN_ROOT}` automatically.
+
+### Path 4 — manual clone (fallback)
+
+```bash
 git clone https://github.com/BaseInfinity/claude-gdlc-wizard ~/tmp/claude-gdlc-wizard
-cp -r ~/tmp/claude-gdlc-wizard/skills .claude/skills/gdlc-suite
-cp ~/tmp/claude-gdlc-wizard/CLAUDE_CODE_GDLC_WIZARD.md .claude/
+node ~/tmp/claude-gdlc-wizard/cli/bin/gdlc-wizard.js init
 rm -rf ~/tmp/claude-gdlc-wizard
 ```
 
-Then in Claude Code, run `/gdlc-setup`. It auto-scans, asks the minimum, and scaffolds your `GDLC.md`.
+### After install — every path
+
+In Claude Code, run `/gdlc-setup`. It auto-scans your project, asks the minimum, and scaffolds your `GDLC.md`. Verify with `npx claude-gdlc-wizard check` (expects 6 `MATCH` rows).
 
 ## How It Works
 

@@ -385,6 +385,45 @@ test_check_json_is_valid() {
     rm -rf "$d"
 }
 
+# --- npm tarball-shape + shebang byte guards (Codex round-1 P0 fixes) ---
+
+# package.json `files` array MUST include "hooks/" — without it, the npm
+# tarball ships without the hook scripts, and cli/init.js's FILES array
+# (which references hooks/_find-gdlc-root.sh, hooks/gdlc-prompt-check.sh,
+# hooks/instructions-loaded-check.sh) breaks 100% of npx installs.
+test_package_files_includes_hooks() {
+    local pkg="$REPO_ROOT/package.json"
+    if jq -e '.files | index("hooks/")' "$pkg" > /dev/null 2>&1; then
+        pass "package.json files array includes hooks/ (npm tarball will ship hooks)"
+    else
+        fail "package.json files array missing hooks/ — npm install would ship without hook scripts and CLI init would fail"
+    fi
+}
+
+# Hook shebangs must start with literal #!/ (bytes 0x23 0x21 0x2f), not the
+# escaped #\! form (bytes 0x23 0x5c 0x21). The escaped form passes when run
+# as `bash script.sh` but fails on direct execution by Claude Code.
+test_hook_shebang_bytes_clean() {
+    local fail_count=0
+    local bad=""
+    for h in "$REPO_ROOT/hooks/"*.sh; do
+        [ -f "$h" ] || continue
+        local first3
+        first3="$(head -c 3 "$h" | xxd -p)"
+        if [ "$first3" = "23212f" ]; then
+            :
+        else
+            fail_count=$((fail_count + 1))
+            bad="$bad $(basename "$h"):0x$first3"
+        fi
+    done
+    if [ $fail_count -eq 0 ]; then
+        pass "all hook shebangs start with literal #!/ (no escaped-bang bytes)"
+    else
+        fail "$fail_count hook(s) have malformed shebang:$bad"
+    fi
+}
+
 # --- Run ---
 
 test_help
@@ -409,6 +448,8 @@ test_check_match_on_fresh_install
 test_check_missing_exits_nonzero
 test_check_missing_reports
 test_check_json_is_valid
+test_package_files_includes_hooks
+test_hook_shebang_bytes_clean
 
 echo ""
 echo "=== Results ==="

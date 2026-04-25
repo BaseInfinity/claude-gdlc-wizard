@@ -1,4 +1,4 @@
-#\!/bin/bash
+#!/usr/bin/env bash
 # Light GDLC hook — baseline reminder every prompt (~80 tokens).
 # Full guidance in skill: .claude/skills/gdlc/
 

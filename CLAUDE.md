@@ -17,7 +17,7 @@ This is a **meta-repository**. It contains the distribution machinery for the GD
 - `install.sh` — `curl | bash` bootstrap pointed at `npx claude-gdlc-wizard`
 - `.claude-plugin/{plugin.json,marketplace.json}` — Claude Code plugin manifest + local marketplace listing
 - `CLAUDE_CODE_GDLC_WIZARD.md` — the canonical wizard doc shipped to consumers
-- `tests/*.sh` — 5 bash test suites, 94 assertions (see TESTING.md)
+- `tests/*.sh` — 5 bash test suites, 96 assertions (see TESTING.md)
 - `.github/workflows/ci.yml` — runs the full test suite on push + PR
 - `.reviews/` — preflight + Codex cross-model handoff per release
 
@@ -44,7 +44,7 @@ All tests are bash, run directly. `package.json` intentionally has no `scripts` 
 | Command | Purpose |
 |---------|---------|
 | `git checkout -- hooks/ && for t in tests/*.sh; do bash "$t" \|\| break; done` | Full test run (restore hooks first — see *Session quirks* below) |
-| `bash tests/test-cli.sh` | CLI integration (init/check/help/version, 22 assertions) |
+| `bash tests/test-cli.sh` | CLI integration (init/check/help/version, 24 assertions) |
 | `bash tests/test-hooks.sh` | Hook behavior (`_find-gdlc-root` walk-up, SETUP-vs-BASELINE emission, 13 assertions) |
 | `bash tests/test-install-script.sh` | Install-script structure (18 assertions; live-install gated by `CLAUDE_GDLC_WIZARD_NPM_PUBLISHED=1`) |
 | `bash tests/test-plugin.sh` | Plugin/CLI parity (plugin.json + marketplace.json validity, hooks.json events, path-prefix split, 20 assertions) |
@@ -90,7 +90,7 @@ See `ARCHITECTURE.md` for the full diagram and component boundaries.
 
 ## Testing
 
-See `TESTING.md`. Short version: this is a **meta-project**, so tests exercise wizard installation + script behavior + plugin parity, not application code. 94 assertions across 5 suites today; Prove-It-Gate discipline — no tautologies.
+See `TESTING.md`. Short version: this is a **meta-project**, so tests exercise wizard installation + script behavior + plugin parity, not application code. 96 assertions across 5 suites today; Prove-It-Gate discipline — no tautologies.
 
 ## Git / Commits
 

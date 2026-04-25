@@ -10,7 +10,14 @@ The `/gdlc` skill is the enforceable form of the playbook (`~/gdlc/GDLC.md`). Co
 
 ## Distribution model
 
-GDLC distributes via a sibling git repo at `~/gdlc/` (mirror of `BaseInfinity/gdlc`). Unlike SDLC/PDLC there is **no npm package** — the wizard operates by file-copy from `~/gdlc/` and by fetching the GitHub raw URLs for CHANGELOG comparison.
+GDLC ships through `BaseInfinity/claude-gdlc-wizard`. Four parallel install channels — same surface (4 skills + 2 hooks + helper + settings.json + this wizard doc) lands either way:
+
+1. **`npx claude-gdlc-wizard init`** — Node CLI (preferred). Idempotent, supports `--dry-run` / `--force` / `check`.
+2. **`curl -fsSL .../install.sh | bash`** — wraps the npx flow with strict mode + Node ≥ 18 preflight.
+3. **Claude Code plugin** — install via the plugin marketplace using `.claude-plugin/plugin.json`. Hooks resolve through `${CLAUDE_PLUGIN_ROOT}` instead of `$CLAUDE_PROJECT_DIR`.
+4. **Manual git clone + `node cli/bin/gdlc-wizard.js init`** — fallback when Node is unavailable in PATH.
+
+The skills still read playbook content from a sibling `~/gdlc/` repo (mirror of `BaseInfinity/gdlc`). Path A (consolidate the playbook into this distribution repo) is under user consideration; Path B (sibling kept) is the v0.1.0 default — framework updates flow through `~/gdlc/` independently of wizard releases.
 
 **Sibling repo prerequisite.** Both setup and update assume `~/gdlc/` exists and is on a clean working tree. If missing:
 
