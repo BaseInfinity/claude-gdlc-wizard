@@ -1,7 +1,24 @@
 {
   "review_id": "sdlc-bootstrap-001",
-  "status": "PENDING_RECHECK",
-  "round": 5,
+  "status": "CERTIFIED",
+  "final_score": 8,
+  "final_round": 6,
+  "round": 6,
+  "certification": {
+    "round": 6,
+    "score": 8,
+    "verdict": "CERTIFY at 8+/10",
+    "review_md": "codex-review-sdlc-bootstrap-r6.md",
+    "all_checks_pass": [
+      "(1) bare-path grep `sdlc-wizard-wrap/[^.]` — empty",
+      "(2) active-plugin grep — only the §Hooks heading line (in disabled-state context)",
+      "(3) item 6 honest-status — PASS",
+      "(4) handoff JSON valid + no duplicate scalar paths",
+      "(5) hashes 1ad9441 / 0d7bfa5 / 59c582b — all ancestors of HEAD",
+      "(6) AI-slop sweep (corrected `rg -ni` flag) — empty",
+      "(7) tip-commit conventional-commit prefix — OK"
+    ]
+  },
   "commit": "1ad9441",
   "round_2_commit": "0d7bfa5",
   "round_3_commit": "59c582b",
@@ -70,7 +87,25 @@
       "commit_at_review_time": "b6f5935",
       "review_md": "codex-review-sdlc-bootstrap-r4.md",
       "findings_summary": "(b) STILL_OPEN — SDLC.md:10 still contained the bare path string `sdlc-wizard-wrap/` (in 'originally' parenthetical), tripping the round-3 grep `sdlc-wizard-wrap/[^.]` even though the surrounding wording was correct DISABLED context. Item 6 honest-status: CLOSED. Handoff structural cleanup: CLOSED. False-positive smoke: CLOSED with sandbox caveat (Codex couldn't mutate files but ran a non-mutating equivalent that fired the right error).",
-      "fixes_landed_in": "round 5 (this iteration)"
+      "fixes_landed_in": "015f90e (round 5 commit; on-HEAD post-amend)"
+    },
+    {
+      "round": 5,
+      "score": null,
+      "verdict": "STILL_OPEN (prompt-bug, content-clean)",
+      "commit_at_review_time": "015f90e",
+      "review_md": "codex-review-sdlc-bootstrap-r5.md",
+      "findings_summary": "Content-clean: bare-path grep empty, item 6 PASS, handoff JSON clean, hashes all ancestors, conventional-commit OK. But the prompt's check 6 used `rg -nEi` which fails on ripgrep 15.1.0 (treats -E as encoding). Codex ran the equivalent commands (`rg -ni`, `grep -nEi`) and both returned empty — the underlying content passes. Strict by Codex's own standard, no certification on a malformed check command.",
+      "fixes_landed_in": "98a46cd (round 6 prompt-only fix)"
+    },
+    {
+      "round": 6,
+      "score": 8,
+      "verdict": "CERTIFY at 8+/10",
+      "commit_at_review_time": "98a46cd (no doc/code changes between r5 and r6 — same main tip)",
+      "review_md": "codex-review-sdlc-bootstrap-r6.md",
+      "findings_summary": "All 7 checks PASS with corrected `rg -ni` flag. Bootstrap CERTIFIED after 6-round dialogue. Closure: 5 rounds of fixes (r1→r2 fixed 5 issues; r2→r3 fixed 4; r3→r4 fixed 4; r4→r5 fixed 1; r5→r6 was a prompt-bug-only fix). Net: ~14 distinct issues found and closed across the dialogue.",
+      "fixes_landed_in": "n/a (CERTIFIED)"
     }
   ],
   "round_5_recheck_focus": [
