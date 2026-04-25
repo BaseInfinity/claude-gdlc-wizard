@@ -1,6 +1,8 @@
 # Roadmap — GDLC Distribution Extraction
 
-> **Status (2026-04-23):** Planned but NOT started. A fresh session can use this doc as the sole brief to begin Phase 1.
+> **Status (2026-04-25):** Phase 1 ✅ **SHIPPED** as `BaseInfinity/claude-gdlc-wizard` v0.2.0, CERTIFIED 8/10 by Codex (3-round dialogue). Path A consolidation merged the framework playbook into the wizard repo; `BaseInfinity/gdlc` is deprecated (`DEPRECATED.md` pointer in place; GitHub archive gated on skill-migration completion). Phases 2 (`codex-gdlc-wizard`) and 3 (Homebrew/gh/curl) are still pending. The original "planned but not started" framing below is preserved as historical context — the table of "does not exist" repos describes April 23 state at planning time, not today's reality.
+
+> **Original status (2026-04-23, historical):** Planned but NOT started. A fresh session could use this doc as the sole brief to begin Phase 1.
 
 ## North star
 
