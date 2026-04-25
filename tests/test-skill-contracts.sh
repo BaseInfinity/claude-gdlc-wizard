@@ -116,26 +116,32 @@ test_setup_has_all_eight_steps() {
 }
 
 test_setup_metadata_block_matches_wizard_doc() {
-    # The 5 canonical metadata comment lines in the skill's verify section
-    # must match the template in the wizard doc. Drift here breaks every
-    # consumer's install.
+    # The 5 canonical metadata comment lines must (a) appear in both files and
+    # (b) match LINE-FOR-LINE. Marker-presence alone is a tautology — Codex
+    # round-1 (Phase 1) found drift between `X.Y.Z` and `<VERSION_FROM_CHANGELOG>`
+    # that the old marker-only check passed. This is the exact-byte assertion.
     local skill="$REPO_ROOT/skills/gdlc-setup/SKILL.md"
+    local doc="$WIZARD_DOC"
     local ok=true
     local missing=""
+    # First: marker presence (cheap fail-fast).
     for marker in "GDLC Wizard Version" "GDLC Sibling SHA" "GDLC Setup Date" "GDLC Last Update" "Completed Steps"; do
-        if ! grep -q "<!-- $marker" "$skill" 2>/dev/null; then
-            ok=false
-            missing="$missing '$marker'"
-        fi
-        if ! grep -q "<!-- $marker" "$WIZARD_DOC" 2>/dev/null; then
-            ok=false
-            missing="$missing 'wizard-doc:$marker'"
-        fi
+        grep -q "<!-- $marker" "$skill" 2>/dev/null || { ok=false; missing="$missing '$marker'"; }
+        grep -q "<!-- $marker" "$doc"   2>/dev/null || { ok=false; missing="$missing 'wizard-doc:$marker'"; }
     done
-    if [ "$ok" = true ]; then
-        pass "gdlc-setup's 5-line metadata block matches the wizard doc template"
+    if [ "$ok" = false ]; then
+        fail "Metadata block marker(s) missing:$missing"
+        return
+    fi
+    # Then: exact-line block comparison from "<!-- GDLC Wizard Version" through "<!-- Completed Steps".
+    local skill_block doc_block
+    skill_block="$(awk '/<!-- GDLC Wizard Version/{found=1} found{print; if(/<!-- Completed Steps/){exit}}' "$skill")"
+    doc_block="$(awk '/<!-- GDLC Wizard Version/{found=1} found{print; if(/<!-- Completed Steps/){exit}}' "$doc")"
+    if [ "$skill_block" = "$doc_block" ]; then
+        pass "gdlc-setup's 5-line metadata block matches the wizard doc EXACTLY (line-level)"
     else
-        fail "Metadata block drift vs wizard doc:$missing"
+        printf "skill block:\n%s\n\ndoc block:\n%s\n" "$skill_block" "$doc_block" >&2
+        fail "Metadata block drift (line-level — placeholders differ between skill and wizard doc)"
     fi
 }
 

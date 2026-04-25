@@ -156,7 +156,7 @@ tmp=$(mktemp -d); cd "$tmp"
 node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js init
 # Expect: 9 files created under .claude/ + CLAUDE_CODE_GDLC_WIZARD.md + .gitignore
 node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js check
-# Expect: 6 MATCH rows, exit 0
+# Expect: every installed item reports MATCH (settings + 3 hook files + 4 skills + wizard doc + 2 .gitignore entries ≈ 10 rows), exit 0
 node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js init
 # Expect: all SKIP, exit 0 (idempotent)
 node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js init --force

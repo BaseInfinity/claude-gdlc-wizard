@@ -15,7 +15,7 @@ GDLC ships through `BaseInfinity/claude-gdlc-wizard`. Four parallel install chan
 1. **`npx claude-gdlc-wizard init`** — Node CLI (preferred). Idempotent, supports `--dry-run` / `--force` / `check`.
 2. **`curl -fsSL .../install.sh | bash`** — wraps the npx flow with strict mode + Node ≥ 18 preflight.
 3. **Claude Code plugin** — install via the plugin marketplace using `.claude-plugin/plugin.json`. Hooks resolve through `${CLAUDE_PLUGIN_ROOT}` instead of `$CLAUDE_PROJECT_DIR`.
-4. **Manual git clone + `node cli/bin/gdlc-wizard.js init`** — fallback when Node is unavailable in PATH.
+4. **Manual git clone + `node cli/bin/gdlc-wizard.js init`** — fallback when npm/npx is unavailable (corp proxy blocks the registry, npm not installed alongside Node, etc.). Still requires Node 18+.
 
 The skills still read playbook content from a sibling `~/gdlc/` repo (mirror of `BaseInfinity/gdlc`). Path A (consolidate the playbook into this distribution repo) is under user consideration; Path B (sibling kept) is the v0.1.0 default — framework updates flow through `~/gdlc/` independently of wizard releases.
 
@@ -59,11 +59,11 @@ The playbook itself (`~/gdlc/GDLC.md`) is referenced but **not** vendored into c
 The consumer project's case-study `GDLC.md` tracks install state via metadata comments in its header:
 
 ```markdown
-<!-- GDLC Wizard Version: X.Y.Z -->
-<!-- GDLC Sibling SHA: <short-sha> -->
-<!-- GDLC Setup Date: YYYY-MM-DD -->
-<!-- GDLC Last Update: YYYY-MM-DD -->
-<!-- Completed Steps: step-1, step-2, ... -->
+<!-- GDLC Wizard Version: <VERSION_FROM_CHANGELOG> -->
+<!-- GDLC Sibling SHA: <SHORT_SHA> -->
+<!-- GDLC Setup Date: <YYYY-MM-DD> -->
+<!-- GDLC Last Update: <YYYY-MM-DD> -->
+<!-- Completed Steps: step-0.1, step-0.2, step-1, step-2, step-3, step-4, step-5, step-6, step-7 -->
 ```
 
 - **Version** — the wizard/playbook semver at the time of install/update. Compared against the CHANGELOG's topmost version to decide whether an update is needed.

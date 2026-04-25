@@ -69,7 +69,7 @@ rm -rf ~/tmp/claude-gdlc-wizard
 
 ### After install — every path
 
-In Claude Code, run `/gdlc-setup`. It auto-scans your project, asks the minimum, and scaffolds your `GDLC.md`. Verify with `npx claude-gdlc-wizard check` (expects 6 `MATCH` rows).
+In Claude Code, run `/gdlc-setup`. It auto-scans your project, asks the minimum, and scaffolds your `GDLC.md`. Verify with `npx claude-gdlc-wizard check` — expect every installed item (settings.json + 3 hook files + 4 skills + wizard doc + .gitignore additions = ~10 rows) to report `MATCH`.
 
 ## How It Works
 
