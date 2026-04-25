@@ -1,0 +1,37 @@
+Round 6 recheck (prompt-fix-only) of the SDLC self-bootstrap on /Users/stefanayala/claude-gdlc-wizard.
+
+Round 5 verdict was STILL_OPEN, but only due to a flag typo in the round-5 prompt's check 6: it used `rg -nEi` which fails on ripgrep 15.1.0 because `-E` means "encoding" there, not "extended regex". Codex ran the equivalent commands (`rg -ni` and `grep -nEi`) and both returned empty as expected. All 7 underlying checks PASSED on content. Only the malformed command failed to execute.
+
+This round is the same 7 checks with check 6 corrected to use `rg -ni` (ripgrep uses extended regex by default; `-i` alone is correct). No code or doc changes were made between round 5 and round 6 — same `main` tip.
+
+Run all 7 checks. If all pass, certify.
+
+1. Bare-path grep:
+   rg -n 'sdlc-wizard-wrap/[^.]' SDLC.md TESTING.md ARCHITECTURE.md CLAUDE.md
+   Expect: empty output, exit 1.
+
+2. Active-plugin grep:
+   rg -n 'active.*plugin|from the global plugin|Wizard Version \(active\)' SDLC.md TESTING.md ARCHITECTURE.md CLAUDE.md
+   Expect: only the §Hooks heading "## Hooks (current state — no active SDLC plugin)" — acceptable.
+
+3. Item-6 honest-status check (full block from round-4 prompt). Expect: PASS.
+
+4. Handoff JSON validity + no duplicate scalar paths:
+   jq . .reviews/handoff-sdlc-bootstrap.json >/dev/null
+   jq -r 'paths(scalars) | join(".")' .reviews/handoff-sdlc-bootstrap.json | sort | uniq -d
+   Expect: VALID + empty duplicates.
+
+5. Hash ancestry (all hashes in handoff are ancestors of HEAD):
+   jq -r '(.commit // empty), (.round_2_commit // empty), (.round_3_commit // empty)' .reviews/handoff-sdlc-bootstrap.json | xargs -I{} sh -c 'git merge-base --is-ancestor {} HEAD && echo {}: ancestor || echo {}: NOT'
+   Expect: all "ancestor".
+
+6. **AI-slop sweep — corrected flag:**
+   rg -ni '\b(delve|game-changer|elevate|deep dive|navigate|seamlessly|comprehensive|robust|landscape)\b' CLAUDE.md TESTING.md SDLC.md ARCHITECTURE.md
+   (ripgrep uses extended regex by default; `-i` alone for case-insensitive.)
+   Expect: empty output, exit 1.
+
+7. Tip-commit conventional-commit prefix:
+   git log -1 --pretty=%B | grep -qE '^(feat|fix|docs|test|chore|refactor)\(' && echo OK || echo FAIL
+   Expect: OK.
+
+If all 7 PASS: CERTIFY at 8+/10. The bootstrap closes after a 5-round dialogue (rounds 1, 2, 3, 4 yielded fixes; round 5 was content-clean but had a malformed check command; round 6 verifies with the correct command).
