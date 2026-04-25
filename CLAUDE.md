@@ -10,16 +10,26 @@ This is a **meta-repository**. It contains the distribution machinery for the GD
 
 ### What this repo contains
 
-- `skills/{gdlc,gdlc-setup,gdlc-update,gdlc-feedback}/SKILL.md` — the 4 skills consumers install
-- `hooks/{gdlc-prompt-check.sh, instructions-loaded-check.sh, _find-gdlc-root.sh}` — 2 enforcement hooks + 1 sourced helper
-- `hooks/hooks.json` — plugin-format registration (`${CLAUDE_PLUGIN_ROOT}`)
-- `cli/bin/gdlc-wizard.js` + `cli/init.js` + `cli/templates/settings.json` — Node CLI (`npx claude-gdlc-wizard init`)
-- `install.sh` — `curl | bash` bootstrap pointed at `npx claude-gdlc-wizard`
-- `.claude-plugin/{plugin.json,marketplace.json}` — Claude Code plugin manifest + local marketplace listing
-- `CLAUDE_CODE_GDLC_WIZARD.md` — the canonical wizard doc shipped to consumers
-- `tests/*.sh` — 5 bash test suites, 96 assertions (see TESTING.md)
-- `.github/workflows/ci.yml` — runs the full test suite on push + PR
-- `.reviews/` — preflight + Codex cross-model handoff per release
+- `GDLC.md` — the **framework playbook** (264 lines: cycles, personas, rubrics, earned rules from case study #1). Consolidated from `~/gdlc/` 2026-04-25 (Path A).
+- `ROADMAP.md` — Phase 1/2/3 distribution roadmap. Phase 1 closed; Phase 2 (`codex-gdlc-wizard`) and Phase 3 (Homebrew/gh/curl) pending.
+- `FEEDBACK_SKILL_SPEC.md` — design spec for the feedback skill.
+- `PLAYBOOK_CHANGELOG.md` — framework changelog (rule-version history, playtest cycles, skill bumps). Distinct from `CHANGELOG.md` which tracks the distribution wizard.
+- `skills/{gdlc,gdlc-setup,gdlc-update,gdlc-feedback}/SKILL.md` — the 4 skills consumers install.
+- `hooks/{gdlc-prompt-check.sh, instructions-loaded-check.sh, _find-gdlc-root.sh}` — 2 enforcement hooks + 1 sourced helper.
+- `hooks/hooks.json` — plugin-format registration (`${CLAUDE_PLUGIN_ROOT}`).
+- `cli/bin/gdlc-wizard.js` + `cli/init.js` + `cli/templates/settings.json` — Node CLI (`npx claude-gdlc-wizard init`).
+- `install.sh` — `curl | bash` bootstrap pointed at `npx claude-gdlc-wizard`.
+- `.claude-plugin/{plugin.json,marketplace.json}` — Claude Code plugin manifest + local marketplace listing.
+- `CLAUDE_CODE_GDLC_WIZARD.md` — the canonical wizard doc shipped to consumers.
+- `tests/*.sh` — 5 bash test suites, 96 assertions (see TESTING.md).
+- `.github/workflows/ci.yml` — runs the full test suite on push + PR.
+- `.reviews/` — preflight + Codex cross-model handoff per release.
+
+### Path A — single-repo consolidation (2026-04-25, v0.2.0)
+
+This repo is now the single home for both **framework playbook** (GDLC.md and friends) and **distribution wizard** (CLI, plugin, hooks, install scripts). Matches SDLC's pattern: `claude-sdlc-wizard` is the only SDLC repo too — there's no separate `~/sdlc/` framework repo.
+
+**Pending v0.2.x cleanup:** the skills still reference `~/gdlc/` for runtime reads (drift detection, CHANGELOG fetch URLs, issue-tracker URL in `gdlc-feedback`). Migration to local-repo paths is queued — held until a Codex round green-lights the v0.2.0 consolidation. Until then, both `~/gdlc/` (deprecated) and `~/claude-gdlc-wizard/` work; new installs should use the latter.
 
 ### What this repo does NOT contain
 

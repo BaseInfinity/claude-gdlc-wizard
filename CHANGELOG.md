@@ -1,9 +1,23 @@
 # Changelog
 
-All notable changes to `claude-gdlc-wizard` will be documented in this file.
+This file tracks the **distribution wizard** (CLI, plugin, hooks, install scripts). For the **framework playbook** (GDLC.md rules, playtests, skill versions, earned-rule history) see [`PLAYBOOK_CHANGELOG.md`](./PLAYBOOK_CHANGELOG.md).
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.0] — 2026-04-25
+
+**Path A consolidation.** Framework playbook moved into this repo. `~/gdlc/` is deprecated; `BaseInfinity/gdlc` will be archived after consumer-side skills are migrated to local-path reads. Same single-repo pattern SDLC uses (`claude-sdlc-wizard` is the only SDLC repo — there's no `~/sdlc/` framework repo).
+
+### Added
+- `GDLC.md` — playbook content moved from `~/gdlc/GDLC.md` (264 lines, the canonical case-study + rules + cycles + personas reference).
+- `ROADMAP.md` — Phase 1/2/3 distribution roadmap moved from `~/gdlc/ROADMAP.md`. Phase 1 now closed (CERTIFIED 2026-04-25); Phases 2-3 pending.
+- `FEEDBACK_SKILL_SPEC.md` — feedback-skill design spec moved from `~/gdlc/FEEDBACK_SKILL_SPEC.md`.
+- `PLAYBOOK_CHANGELOG.md` — framework changelog moved from `~/gdlc/CHANGELOG.md`. Tracks rule-version history, playtest cycles, skill-version bumps. Distinct from this file (which tracks distribution-wizard releases).
+
+### Pending (next minor)
+- Skills' `~/gdlc/` references (drift-detection logic in `gdlc-update`, fetch URLs in `gdlc-feedback`, `diff -q` parity checks) need migration to local-repo paths. Held until a Codex round green-lights the consolidation.
+- `BaseInfinity/gdlc` archive on GitHub: gated on user authorization after the skill migration lands.
 
 ## [0.1.0] — 2026-04-23
 

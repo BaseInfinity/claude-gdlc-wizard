@@ -1,6 +1,6 @@
 {
   "name": "claude-gdlc-wizard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "GDLC enforcement for Claude Code — persona-driven playtest cycles, triangulated findings, ratchet-only-tightens. Sibling to claude-sdlc-wizard, for games instead of code.",
   "bin": {
     "gdlc-wizard": "cli/bin/gdlc-wizard.js"
