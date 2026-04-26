@@ -29,7 +29,9 @@ This wizard installs the GDLC skill suite into any Claude Code project: persona-
 
 Pick whichever fits your environment. All four paths land the same surface: 4 skills + 2 hooks + helper + settings.json + wizard doc. No sibling-repo clone required — the wizard is fully self-contained as of v0.2.1.
 
-### Path 1 — `npx` (recommended)
+> **Heads up:** the npm package is queued for publish but not yet on the registry. Until then, **Path 4 (manual clone)** and **Path 3 (Claude Code plugin)** are the working paths. Path 1 (`npx`) and Path 2 (`curl | bash`) will return 404 until publish lands.
+
+### Path 1 — `npx` (recommended once published)
 
 From your game project root:
 
@@ -39,7 +41,7 @@ npx -y claude-gdlc-wizard init
 
 That installs everything under `.claude/` and writes `CLAUDE_CODE_GDLC_WIZARD.md` to project root. Re-run any time — idempotent. `--force` overwrites; `--dry-run` previews.
 
-### Path 2 — `curl | bash`
+### Path 2 — `curl | bash` (also pending publish)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/install.sh | bash
@@ -47,11 +49,11 @@ curl -fsSL https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/mai
 
 Wraps the `npx` flow with Node ≥ 18 preflight + download guard.
 
-### Path 3 — Claude Code plugin
+### Path 3 — Claude Code plugin (works today)
 
 Use the Claude Code plugin marketplace mechanism (see Anthropic docs) to install the plugin defined at `.claude-plugin/plugin.json`. Hooks resolve through `${CLAUDE_PLUGIN_ROOT}` automatically.
 
-### Path 4 — manual clone (fallback)
+### Path 4 — manual clone (works today; recommended interim)
 
 ```bash
 git clone https://github.com/BaseInfinity/claude-gdlc-wizard ~/tmp/claude-gdlc-wizard
