@@ -5,6 +5,29 @@ This file tracks the **distribution wizard** (CLI, plugin, hooks, install script
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-04-25
+
+**Skill behavioral migration to local-repo paths.** The transitional `~/gdlc/` clone is no longer required. Skills are fully self-contained via the wizard CLI + WebFetch.
+
+### Changed
+- **`gdlc-update`** — drift detection delegates to `npx claude-gdlc-wizard check` instead of `diff -q ~/gdlc/.claude/skills/...`. CHANGELOG / playbook fetch via WebFetch from `raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/`. Apply path is now **per-file WebFetch + Write** (one Write per "adopt latest" decision) so "keep mine" decisions stay no-ops. `.claude/settings.json` keeps an in-skill JSON merge that mirrors `cli/init.js::mergeSettings` semantics. `check-only` always runs through step-5 drift detection — never short-circuits on version-match.
+- **`gdlc-feedback`** — issue tracker repo: `BaseInfinity/gdlc` → `BaseInfinity/claude-gdlc-wizard`. Wizard doc read from `CLAUDE_CODE_GDLC_WIZARD.md` at consumer project root (CLI installs it there). Managed-files table updated: `gdlc-feedback/SKILL.md` now noted as installed by the CLI (not "verbatim from sibling").
+- **`gdlc-setup`** — sibling-clone prerequisite removed. Step 0.2 now delegates the full-surface verification to `npx claude-gdlc-wizard check` (covers settings.json + 3 hooks + 4 skills + wizard doc in one shot, matches `cli/init.js::FILES`). Source ID captured from `npx claude-gdlc-wizard --version` (with optional git-SHA suffix when a local clone is present).
+- **`gdlc`** — playbook reference updated to the upstream raw URL (WebFetch); legacy `~/gdlc/GDLC.md` references removed.
+- **`cli/init.js`** — post-install message no longer suggests `git clone https://github.com/BaseInfinity/gdlc ~/gdlc`. Step list shortened from 4 to 3.
+- **`README.md`** — transitional sibling-clone prerequisite section removed. Issue-tracker links updated to `BaseInfinity/claude-gdlc-wizard`.
+- **`CLAUDE_CODE_GDLC_WIZARD.md`** — URLs table, managed-files table, version-tracking, step registries, and rules all updated to reflect single-repo flow. Field name `Sibling SHA` preserved for backward compatibility (semantics: source ID = npm version, optionally suffixed with git SHA).
+- **`package.json` `bugs.url`** — points at `BaseInfinity/claude-gdlc-wizard/issues`.
+
+### Added
+- **6 new contract tests** in `tests/test-skill-contracts.sh` (21 → 27 assertions; whole-suite total 96 → 102):
+  - 3 forbidden-pattern: no skill or wizard-doc reference to `~/gdlc/`; no skill reference to deprecated `BaseInfinity/gdlc` (regex `BaseInfinity/gdlc([^-]|$)` — `claude-gdlc-wizard` is allowed).
+  - 3 regression assertions covering the round-1 review findings: gdlc-update step-7 must document "keep mine" as a no-op (Finding 1); `check-only` must run through drift even when version matches latest (Finding 2); gdlc-setup step-0.2 must delegate full-surface verification to the CLI's `check` (Finding 3).
+
+### Migration notes
+- Existing v0.2.0 consumers can upgrade with `/gdlc-update` (or `npx claude-gdlc-wizard init --force`). Their `~/gdlc/` clone becomes unused but harmless; safe to delete.
+- `BaseInfinity/gdlc` GitHub-archive remains gated on user authorization. With the migration shipped, no functional consumer dependency remains on that repo.
+
 ## [0.2.0] — 2026-04-25
 
 **Path A consolidation.** Framework playbook moved into this repo. `~/gdlc/` is deprecated; `BaseInfinity/gdlc` will be archived after consumer-side skills are migrated to local-path reads. Same single-repo pattern SDLC uses (`claude-sdlc-wizard` is the only SDLC repo — there's no `~/sdlc/` framework repo).

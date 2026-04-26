@@ -188,14 +188,16 @@ test_update_references_changelog() {
     fi
 }
 
-test_update_prefers_local_sibling_over_fetch() {
-    # Wizard doc says: "Update prefers the local sibling at ~/gdlc/ over
-    # fetching — it's faster and always consistent with the skill pair."
+test_update_uses_npx_check_for_drift() {
+    # v0.2.1: drift detection delegates to the local CLI (`npx claude-gdlc-wizard check`)
+    # instead of `diff -q ~/gdlc/...`. The CLI compares installed files against
+    # repo templates and reports MATCH/CUSTOMIZED/MISSING/DRIFT — same job, no
+    # sibling clone required. Apply path uses `npx claude-gdlc-wizard init --force`.
     local f="$REPO_ROOT/skills/gdlc-update/SKILL.md"
-    if grep -q "~/gdlc/" "$f"; then
-        pass "gdlc-update references ~/gdlc/ sibling (preferred over URL fetch)"
+    if grep -q "npx claude-gdlc-wizard check\|claude-gdlc-wizard check" "$f"; then
+        pass "gdlc-update delegates drift detection to npx claude-gdlc-wizard check"
     else
-        fail "gdlc-update should read from ~/gdlc/ when available"
+        fail "gdlc-update must use 'npx claude-gdlc-wizard check' for drift (replaces ~/gdlc/ diff)"
     fi
 }
 
@@ -315,6 +317,115 @@ test_wizard_doc_url_base_is_gdlc_not_sdlc() {
     fi
 }
 
+# --- v0.2.1 forbidden-pattern tests (skill behavioral migration) ---
+
+test_no_skill_references_legacy_gdlc_path() {
+    # ~/gdlc/ was the v0.1.x sibling location. v0.2.1 migrated to project-local
+    # paths + WebFetch + `npx claude-gdlc-wizard check`. Skills must not
+    # reference ~/gdlc/ at runtime — that path is no longer required to exist.
+    local fail_count=0
+    local bad=""
+    for skill in gdlc gdlc-setup gdlc-update gdlc-feedback; do
+        local f="$REPO_ROOT/skills/$skill/SKILL.md"
+        local hits
+        hits="$(grep -c "~/gdlc/" "$f" 2>/dev/null || true)"
+        [ -z "$hits" ] && hits=0
+        if [ "$hits" -gt 0 ]; then
+            fail_count=$((fail_count + hits))
+            bad="$bad $skill($hits)"
+        fi
+    done
+    if [ "$fail_count" -eq 0 ]; then
+        pass "No skill references legacy ~/gdlc/ sibling path"
+    else
+        fail "Skills still contain $fail_count ~/gdlc/ reference(s):$bad — must use project-local or WebFetch"
+    fi
+}
+
+test_no_skill_references_legacy_repo() {
+    # BaseInfinity/gdlc is the deprecated framework repo (Path A consolidated
+    # everything into BaseInfinity/claude-gdlc-wizard). Skills must reference
+    # the active repo. Pattern: BaseInfinity/gdlc not followed by `-` (so the
+    # `gdlc-wizard` substring inside `claude-gdlc-wizard` doesn't false-positive).
+    local fail_count=0
+    local bad=""
+    for skill in gdlc gdlc-setup gdlc-update gdlc-feedback; do
+        local f="$REPO_ROOT/skills/$skill/SKILL.md"
+        local hits
+        hits="$(grep -cE "BaseInfinity/gdlc([^-]|$)" "$f" 2>/dev/null || true)"
+        [ -z "$hits" ] && hits=0
+        if [ "$hits" -gt 0 ]; then
+            fail_count=$((fail_count + hits))
+            bad="$bad $skill($hits)"
+        fi
+    done
+    if [ "$fail_count" -eq 0 ]; then
+        pass "No skill references deprecated BaseInfinity/gdlc (use BaseInfinity/claude-gdlc-wizard)"
+    else
+        fail "Skills still contain $fail_count BaseInfinity/gdlc reference(s):$bad — Path A consolidated to claude-gdlc-wizard"
+    fi
+}
+
+test_update_keep_mine_is_noop() {
+    # v0.2.1 finding 1 (Codex round 1): step-7 must explicitly document that
+    # "keep mine" decisions are no-ops (preserve CUSTOMIZED state). The previous
+    # form ran `init --force` which overwrites unconditionally — that destroyed
+    # any keep-mine intent. Step-7 now does per-file apply; this contract test
+    # locks in the no-op semantics.
+    local f="$REPO_ROOT/skills/gdlc-update/SKILL.md"
+    if grep -qi "keep mine.*do nothing\|CUSTOMIZED state persists\|keep mine.*no-op" "$f"; then
+        pass "gdlc-update step-7 documents 'keep mine' as a no-op (CUSTOMIZED preserved)"
+    else
+        fail "gdlc-update step-7 must document that 'keep mine' preserves CUSTOMIZED state (no overwrite)"
+    fi
+}
+
+test_update_check_only_runs_drift() {
+    # v0.2.1 finding 2 (Codex round 1): `check-only` previously short-circuited
+    # at step-3 when version matched latest, which violated the argument contract
+    # at the bottom of the skill ("run through step-5, print report, stop").
+    # The fix: step-3 ALWAYS runs through step-5 in check-only mode, even on
+    # version-match — drift detection is the whole point of check-only.
+    local f="$REPO_ROOT/skills/gdlc-update/SKILL.md"
+    if grep -qi "check-only.*always continue\|always continue through step-5" "$f"; then
+        pass "gdlc-update check-only always runs drift detection (no short-circuit on version match)"
+    else
+        fail "gdlc-update must guarantee check-only runs through step-5 even when version matches latest"
+    fi
+}
+
+test_setup_step_0_2_delegates_to_cli_check() {
+    # v0.2.1 finding 3 (Codex round 1): step-0.2's partial test list missed
+    # settings.json + 3 hook files. Delegating to `npx claude-gdlc-wizard check`
+    # covers the full surface in one shot and stays in sync with `cli/init.js::FILES`.
+    local f="$REPO_ROOT/skills/gdlc-setup/SKILL.md"
+    if awk '/### step-0.2/,/### step-1/' "$f" | grep -q "npx claude-gdlc-wizard check"; then
+        pass "gdlc-setup step-0.2 delegates verification to npx claude-gdlc-wizard check"
+    else
+        fail "gdlc-setup step-0.2 must delegate full-surface verification to the CLI"
+    fi
+}
+
+test_wizard_doc_no_legacy_paths() {
+    # The shipped wizard doc should also be free of legacy ~/gdlc/ paths and
+    # BaseInfinity/gdlc references after v0.2.1. Historical context belongs in
+    # CHANGELOG.md, not the canonical contract doc.
+    local fail_count=0
+    local bad=""
+    local hits1 hits2
+    hits1="$(grep -c "~/gdlc/" "$WIZARD_DOC" 2>/dev/null || true)"
+    hits2="$(grep -cE "BaseInfinity/gdlc([^-]|$)" "$WIZARD_DOC" 2>/dev/null || true)"
+    [ -z "$hits1" ] && hits1=0
+    [ -z "$hits2" ] && hits2=0
+    if [ "$hits1" -gt 0 ]; then fail_count=$((fail_count + hits1)); bad="$bad ~/gdlc/($hits1)"; fi
+    if [ "$hits2" -gt 0 ]; then fail_count=$((fail_count + hits2)); bad="$bad BaseInfinity/gdlc($hits2)"; fi
+    if [ "$fail_count" -eq 0 ]; then
+        pass "Wizard doc has no legacy ~/gdlc/ or BaseInfinity/gdlc references"
+    else
+        fail "Wizard doc contains $fail_count legacy reference(s):$bad"
+    fi
+}
+
 # --- Run ---
 
 test_all_skills_have_effort_high
@@ -327,7 +438,7 @@ test_setup_scaffolds_feedback_log
 test_setup_never_vendors_playbook
 test_setup_refuses_overwriting_existing_stub
 test_update_references_changelog
-test_update_prefers_local_sibling_over_fetch
+test_update_uses_npx_check_for_drift
 test_feedback_uses_stock_labels_only
 test_feedback_has_five_canonical_types
 test_feedback_prefixes_title_with_type
@@ -338,6 +449,12 @@ test_wizard_doc_has_canonical_label_map
 test_wizard_doc_has_setup_step_registry
 test_wizard_doc_has_managed_files_table
 test_wizard_doc_url_base_is_gdlc_not_sdlc
+test_no_skill_references_legacy_gdlc_path
+test_no_skill_references_legacy_repo
+test_wizard_doc_no_legacy_paths
+test_update_keep_mine_is_noop
+test_update_check_only_runs_drift
+test_setup_step_0_2_delegates_to_cli_check
 
 echo ""
 echo "=== Results ==="

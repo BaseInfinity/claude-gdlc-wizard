@@ -15,7 +15,7 @@ $ARGUMENTS
 
 SDLC governs **code quality** (TDD, reviews, CI). GDLC governs **game quality** — the game must remain fun, fair, readable, and aligned with the personas it targets. Every feature change must be playtested by the personas it serves; every **P0** finding earns a regression test RED before the fix lands (P1/P2 earn a ratchet entry at author discretion with severity recorded); every ratchet entry only tightens.
 
-This skill is the enforceable form of the project's `GDLC.md` (the case study) and the portable [`~/gdlc/GDLC.md`](../../../GDLC.md) (the playbook). When the playbook describes a rule, this skill turns it into a pre-flight check.
+This skill is the enforceable form of the project's `GDLC.md` (the case study) and the portable upstream playbook at [`claude-gdlc-wizard/GDLC.md`](https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/GDLC.md). When the playbook describes a rule, this skill turns it into a pre-flight check.
 
 ## Full GDLC Checklist
 
@@ -25,7 +25,7 @@ Your FIRST action must be TaskCreate (or TodoWrite) with these steps:
 TaskCreate([
   // PLANNING PHASE
   { subject: "Read project's GDLC.md (case study) + recent playtest entries", status: "in_progress" },
-  { subject: "Read ~/gdlc/GDLC.md (playbook) — earned rules + cycle types", status: "pending" },
+  { subject: "Fetch upstream playbook (claude-gdlc-wizard/GDLC.md via WebFetch) — earned rules + cycle types", status: "pending" },
   { subject: "Pick cycle type: gameplay-matrix | art-craft-review | pipeline-contract-audit", status: "pending" },
   { subject: "Pick personas for this cycle — from matrix, or add one if new contract demands", status: "pending" },
   { subject: "Confidence level: HIGH/MEDIUM/LOW (95% minimum to proceed without asking)", status: "pending" },
@@ -62,7 +62,7 @@ TaskCreate([
   // FINAL
   { subject: "Run full SDLC: lint, all tests pass, self-review diff, commit", status: "pending" },
   { subject: "Append playtest entry to project's GDLC.md: methodology, findings, ratchet delta, earned rules", status: "pending" },
-  { subject: "If earned rules generalize → propose update to ~/gdlc/GDLC.md (playbook update)", status: "pending" }
+  { subject: "If earned rules generalize → propose update to claude-gdlc-wizard/GDLC.md (playbook update)", status: "pending" }
 ])
 ```
 
@@ -293,7 +293,7 @@ Before presenting approach, STATE your confidence:
 If this playtest revealed insights, update the right place:
 
 - **Project-specific finding or earned rule** → project's `GDLC.md` (case study)
-- **Rule that generalizes across case studies** → propose update to `~/gdlc/GDLC.md` (playbook), require a second case study confirming before merging
+- **Rule that generalizes across case studies** → propose update to `claude-gdlc-wizard/GDLC.md` (playbook), require a second case study confirming before merging
 - **New cycle type** → playbook update *only* after the cycle has closed a bug class the existing cycles structurally cannot see — earn the line
 - **Skill bug (orchestration confusion, prompt artifact)** → update this `SKILL.md`
 
@@ -302,6 +302,6 @@ Do NOT propagate a rule from one case study to the playbook until a second case 
 ---
 
 **Full reference:**
-- `~/gdlc/GDLC.md` — playbook (case-study-agnostic)
+- Upstream playbook: `https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/GDLC.md` (case-study-agnostic, fetch via WebFetch)
 - `<project>/GDLC.md` — case study (this project's earned rules + playtest ledger)
-- `~/.claude/plugins-local/sdlc-wizard-wrap/plugins/sdlc-wizard/skills/sdlc/SKILL.md` — SDLC sibling (cross-model review protocol)
+- `claude-sdlc-wizard` SDLC skill — cross-model review protocol (install separately for SDLC discipline)

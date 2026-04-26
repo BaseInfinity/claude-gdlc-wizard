@@ -41,7 +41,7 @@ The **testing diamond still applies** — just re-scoped:
                     └────────────────────────┘
                 ┌──────────────────────────────────┐
                 │   Integration (the bulk)          │  real tmpdirs, real hooks,
-                │   — 5 bash suites, 96 assertions  │  real JSON validity, zero mocks
+                │   — 5 bash suites, 102 assertions │  real JSON validity, zero mocks
                 └──────────────────────────────────┘
             ┌──────────────────────────────────────────┐
             │   Contract / Prove-It-Gate (wide base)    │  liveness-checked contracts
@@ -54,7 +54,7 @@ Mocking rule: **none**. Tests run the actual binary against actual filesystems, 
 
 ## Test suites
 
-5 suites, 96 assertions total. Each file is independently runnable (`bash tests/<name>.sh`).
+5 suites, 102 assertions total. Each file is independently runnable (`bash tests/<name>.sh`).
 
 ### tests/test-cli.sh (24 assertions — CLI integration)
 
@@ -110,20 +110,21 @@ The P0 guard against plugin-vs-CLI drift. Covers:
 
 Swapping the two path-prefix vars silently breaks installs. These tests are the only line of defense; do not weaken them.
 
-### tests/test-skill-contracts.sh (21 assertions — Prove-It-Gate)
+### tests/test-skill-contracts.sh (27 assertions — Prove-It-Gate)
 
 Contract tests against the 4 skills and `CLAUDE_CODE_GDLC_WIZARD.md`. Covers:
 
 - `effort: high` (or stricter) across all 4 skills
 - `gdlc-setup/SKILL.md` has a 9-step registry + 5-line metadata block matching the template in the wizard doc
 - `gdlc-setup` scaffolds `.gdlc/feedback-log.md`
-- Never-vendor-playbook rule present (skills read `~/gdlc/`, don't bundle it)
-- `gdlc-update` references CHANGELOG + sibling repo
+- Never-vendor-playbook rule present (skills WebFetch the upstream playbook, don't bundle it)
+- `gdlc-update` references CHANGELOG + uses `npx claude-gdlc-wizard check` for drift (replaces `~/gdlc/` diff in v0.2.1)
 - `gdlc-feedback` uses **stock GitHub labels only** (`bug`/`enhancement`/`question`) — no legacy `feedback:*` custom labels
 - 5 canonical type identifiers present (`earned-rule-candidate`, `playbook-gap`, `playbook-bug`, `wizard-bug`, `methodology-question`)
 - `[<type>]` prefix format enforced on issue titles
 - Explicit allowlist with EXCLUDED class
 - Wizard doc has template + step registry + managed-files section + no stale SDLC refs
+- **v0.2.1 forbidden patterns:** no skill or wizard doc references legacy `~/gdlc/` paths or `BaseInfinity/gdlc` issue tracker (Path A consolidated to `claude-gdlc-wizard`)
 
 ### Running the full suite
 
@@ -134,7 +135,7 @@ git checkout -- hooks/
 # All 5 suites sequentially, stop on first failure
 for t in tests/*.sh; do echo "--- $t"; bash "$t" || break; done
 
-# Expected: "All tests passed" from each, 96 total assertions, 0 failures
+# Expected: "All tests passed" from each, 102 total assertions, 0 failures
 ```
 
 ---

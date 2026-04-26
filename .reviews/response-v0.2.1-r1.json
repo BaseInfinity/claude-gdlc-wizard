@@ -1,0 +1,58 @@
+{
+  "review_id": "v0.2.1-skill-migration",
+  "round": 2,
+  "responding_to": ".reviews/codex-review-v0.2.1-r1.md",
+  "previous_score": 7,
+  "responses": [
+    {
+      "finding": "1",
+      "severity": "P1",
+      "action": "FIXED",
+      "summary": "Rewrote skills/gdlc-update/SKILL.md step-7 from a global `npx claude-gdlc-wizard init --force` into a per-file apply: 'adopt latest' / 'MISSING' files get WebFetch + Write (with chmod +x for hooks); 'keep mine' files are explicit no-ops; 'DRIFT' files require user triage; '.claude/settings.json' uses an in-skill JSON merge that mirrors cli/init.js::mergeSettings semantics. Also added regression test test_update_keep_mine_is_noop in tests/test-skill-contracts.sh which fails if the skill stops documenting 'keep mine' as a no-op. Tests pass.",
+      "files": [
+        "skills/gdlc-update/SKILL.md:127-150",
+        "tests/test-skill-contracts.sh:319-330"
+      ]
+    },
+    {
+      "finding": "2",
+      "severity": "P2",
+      "action": "FIXED",
+      "summary": "Reordered skills/gdlc-update/SKILL.md step-3: `check-only` always continues through step-5 drift detection regardless of version-match. The early 'You're up to date!' exit now requires both (a) version match AND (b) drift detection reporting MATCH for every managed file. Added regression test test_update_check_only_runs_drift to lock in the contract.",
+      "files": [
+        "skills/gdlc-update/SKILL.md:55-61",
+        "tests/test-skill-contracts.sh:332-342"
+      ]
+    },
+    {
+      "finding": "3",
+      "severity": "P2",
+      "action": "FIXED",
+      "summary": "Replaced skills/gdlc-setup/SKILL.md step-0.2 partial test list (wizard doc + 4 skills) with a single delegation to `npx claude-gdlc-wizard check`. The CLI's check command covers the full FILES array (settings.json + 3 hook files + 4 skill files + wizard doc + .gitignore additions) and stays automatically in sync with cli/init.js::FILES. Added regression test test_setup_step_0_2_delegates_to_cli_check.",
+      "files": [
+        "skills/gdlc-setup/SKILL.md:35-43",
+        "tests/test-skill-contracts.sh:344-354"
+      ]
+    },
+    {
+      "finding": "4",
+      "severity": "P2",
+      "action": "FIXED",
+      "summary": "Updated skills/gdlc-feedback/SKILL.md managed-files table: the gdlc-feedback/SKILL.md row now reads 'Installed by `npx claude-gdlc-wizard init` (the CLI)' and 'drift-detected by `/gdlc-update` via `npx claude-gdlc-wizard check`'. Removed 'Installed verbatim from sibling' wording.",
+      "files": [
+        "skills/gdlc-feedback/SKILL.md:186"
+      ]
+    },
+    {
+      "finding": "5",
+      "severity": "P2",
+      "action": "FIXED",
+      "summary": "Updated all stale assertion counts. CLAUDE.md, TESTING.md, ARCHITECTURE.md now read 102 total assertions (was 96, then 99 in r1) and 27 skill-contracts assertions (was 21). Final test run: cli=24, hooks=13, install-script=18, plugin=20, skill-contracts=27, total=102 passed, 0 failed.",
+      "files": [
+        "CLAUDE.md:24,57,61,103",
+        "TESTING.md:44,57,113,138",
+        "ARCHITECTURE.md:16,71,118"
+      ]
+    }
+  ]
+}

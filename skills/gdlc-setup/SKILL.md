@@ -1,6 +1,6 @@
 ---
 name: gdlc-setup
-description: Confidence-driven setup wizard for GDLC — auto-scans consumer project, installs the /gdlc skill, scaffolds a case-study GDLC.md. Asks only what can't be detected or inferred. Run on first install.
+description: Confidence-driven setup wizard for GDLC — auto-scans consumer project, verifies the wizard install, scaffolds a case-study GDLC.md. Asks only what can't be detected or inferred. Run on first install (after `npx claude-gdlc-wizard init`).
 argument-hint: [regenerate | skill-only | verify-only]
 effort: high
 ---
@@ -13,17 +13,17 @@ $ARGUMENTS
 
 ## MANDATORY FIRST ACTION: Read the Wizard Doc
 
-**Before doing ANYTHING else**, use the Read tool to read `~/gdlc/CLAUDE_CODE_GDLC_WIZARD.md`. It contains the step registry, managed-files list, URLs, version-tracking format, and the case-study template. Do NOT proceed without reading it first.
+**Before doing ANYTHING else**, use the Read tool to read `CLAUDE_CODE_GDLC_WIZARD.md` at the consumer project root. It contains the step registry, managed-files list, URLs, version-tracking format, and the case-study template. Do NOT proceed without reading it first.
 
-If the sibling repo is missing (`~/gdlc/` doesn't exist), stop and tell the user:
+If `CLAUDE_CODE_GDLC_WIZARD.md` is missing from the project root, the wizard wasn't installed. Stop and tell the user:
 
 ```bash
-git clone https://github.com/BaseInfinity/gdlc ~/gdlc
+npx claude-gdlc-wizard init
 ```
 
 ## Purpose
 
-Install the `/gdlc` skill into the current project, scaffold a case-study stub, and wire metadata so `/gdlc-update` can keep it in sync with the sibling repo. Follow SDLC's confidence-driven principle: **never ask what scanning can reveal** — detect, confirm in bulk, ask only the unresolvable.
+Scaffold the consumer's case-study `GDLC.md`, verify the four `/gdlc*` skills are installed, and wire metadata so `/gdlc-update` can keep the install in sync. Skill files themselves are installed by `npx claude-gdlc-wizard init` (the CLI), not by this skill — `/gdlc-setup` runs *after* the CLI has placed the skill files and wizard doc. Follow SDLC's confidence-driven principle: **never ask what scanning can reveal** — detect, confirm in bulk, ask only the unresolvable.
 
 ## Execution Checklist
 
@@ -31,29 +31,36 @@ Follow these steps IN ORDER. Do not skip or combine steps.
 
 ### step-0.1 — Read Wizard Doc
 
-Read `~/gdlc/CLAUDE_CODE_GDLC_WIZARD.md` (done above — this is the mandatory first action).
+Read `CLAUDE_CODE_GDLC_WIZARD.md` at the consumer project root (done above — this is the mandatory first action).
 
-### step-0.2 — Verify Sibling Repo
+### step-0.2 — Verify Wizard Install
+
+The CLI installs the wizard surface before this skill runs (settings.json, 3 hook files, 4 skill files, wizard doc, .gitignore additions). Delegate the full verification to the CLI rather than partial-test the surface:
 
 ```bash
-test -f ~/gdlc/GDLC.md && \
-  test -f ~/gdlc/.claude/skills/gdlc/SKILL.md && \
-  test -f ~/gdlc/CHANGELOG.md
+npx claude-gdlc-wizard check
 ```
 
-If any fail, stop and tell the user to `git clone https://github.com/BaseInfinity/gdlc ~/gdlc` (or `git -C ~/gdlc pull` if the clone is stale).
+Every managed item should report MATCH. Acceptable on first install: `.gitignore` may report DRIFT if the consumer has no `.gitignore` yet — that's resolved later when `/gdlc-setup` writes its own additions. Any MISSING / DRIFT for skills, hooks, settings.json, or the wizard doc means the install is incomplete — stop and tell the user to run `npx claude-gdlc-wizard init` (or `npx claude-gdlc-wizard init --force` to repair a partial install).
 
-Verify the sibling working tree is clean (a dirty sibling can leave the consumer pinned to an unrecorded SHA):
+Capture the source ID and the latest CHANGELOG version:
+
 ```bash
-git -C ~/gdlc status --porcelain
+SOURCE_ID=$(npx claude-gdlc-wizard --version 2>/dev/null || echo "unknown")
+# Optional: append git SHA if a local clone exists
+if [ -d "$HOME/claude-gdlc-wizard/.git" ]; then
+  GIT_SHA=$(git -C "$HOME/claude-gdlc-wizard" rev-parse --short HEAD 2>/dev/null)
+  [ -n "$GIT_SHA" ] && SOURCE_ID="${SOURCE_ID}-${GIT_SHA}"
+fi
 ```
-If the command prints any output, STOP. Tell the user to commit or stash in `~/gdlc/` before re-running setup. Do NOT proceed to SHA capture or skill copy against a dirty sibling.
 
-Capture the sibling commit SHA and the latest CHANGELOG version:
-```bash
-git -C ~/gdlc rev-parse --short HEAD
+For the latest version, WebFetch the CHANGELOG:
+
 ```
-Parse `~/gdlc/CHANGELOG.md` — the topmost `## [X.Y.Z]` is the current wizard version.
+https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/CHANGELOG.md
+```
+
+Parse the topmost `## [X.Y.Z]` — that's the current wizard version.
 
 ### step-1 — Auto-Scan Consumer Project
 
@@ -67,7 +74,7 @@ Scan the current working directory for GDLC-relevant signals. Every signal maps 
 | `src/*.js` with `new AudioContext` or `canvas.getContext` | Browser game surface | gameplay-matrix, art-craft-review |
 | `snippets/`, `levels/`, `content/`, `sprites/`, `audio/` dirs | Content pool | pipeline-contract-audit (audit-map likely) |
 | Existing `GDLC.md` at project root | Prior case study | skill-only install |
-| Existing `.claude/skills/gdlc/SKILL.md` | Already installed | redirect to `/gdlc-update` |
+| Existing `.claude/skills/gdlc/SKILL.md` (already there from CLI) | Wizard installed | expected; proceed |
 | `.claude/skills/sdlc-wizard/` or `.claude/skills/setup/` | SDLC wizard installed | compatible peer; note it |
 | `CLAUDE.md` present | Project has AI instructions | note it; do not overwrite |
 
@@ -111,19 +118,15 @@ Then I need:
 
 **Never ask what was already detected.** The confirmation is a single "yes, proceed" — not 15 yes/no questions.
 
-### step-4 — Copy the Skill Suite
+### step-4 — Verify the Skill Suite
 
-The wizard installs four skills from `~/gdlc/.claude/skills/` verbatim. Every sibling skill directory is copied in one pass:
+The CLI already installed the four skills under `.claude/skills/`. Verify they match the published templates:
 
 ```bash
-for skill in gdlc gdlc-setup gdlc-update gdlc-feedback; do
-  mkdir -p .claude/skills/$skill
-  cp ~/gdlc/.claude/skills/$skill/SKILL.md .claude/skills/$skill/SKILL.md
-  diff -q ~/gdlc/.claude/skills/$skill/SKILL.md .claude/skills/$skill/SKILL.md
-done
+npx claude-gdlc-wizard check
 ```
 
-Every `diff -q` must report identical. If any mismatch, stop — the copy failed for that skill.
+Every managed skill file should report MATCH. If any reports CUSTOMIZED / MISSING / DRIFT, surface to the user — for fresh installs this should never happen, so it indicates either a partial install or a customized fork. For the latter, redirect to `/gdlc-update` to triage.
 
 ### step-5 — Scaffold Case-Study Stub + Feedback Scaffolds
 
@@ -149,8 +152,8 @@ Skip if argument is `skill-only`, or if `GDLC.md` at project root already exists
 Otherwise, write `GDLC.md` at the project root from the template in `CLAUDE_CODE_GDLC_WIZARD.md` (Case-Study GDLC.md template section). Replace placeholders:
 
 - `<PROJECT_NAME>` — user's answer from step-3.
-- `<VERSION_FROM_CHANGELOG>` — topmost version from `~/gdlc/CHANGELOG.md`.
-- `<SHORT_SHA>` — from step-0.2.
+- `<VERSION_FROM_CHANGELOG>` — topmost version from the CHANGELOG fetched in step-0.2.
+- `<SHORT_SHA>` — the source ID captured in step-0.2.
 - `<YYYY-MM-DD>` — today's date.
 - `<DETECTED_OR_USER_CONFIRMED_SURFACES>` — from step-3. Comma-separated list.
 - `<DETECTED_HARNESS_OR_...>` — from step-1 detections.
@@ -167,14 +170,14 @@ The metadata comments from the template are already filled. Verify the full five
 <!-- Completed Steps: step-0.1, step-0.2, step-1, step-2, step-3, step-4, step-5, step-6, step-7 -->
 ```
 
-On initial install `GDLC Last Update` equals `GDLC Setup Date`. `/gdlc-update` bumps `Last Update` on every subsequent update while preserving `Setup Date`.
+On initial install `GDLC Last Update` equals `GDLC Setup Date`. `/gdlc-update` bumps `Last Update` on every subsequent update while preserving `Setup Date`. The `Sibling SHA` field name is preserved for backward compatibility — its value is now the source ID (npm version, optionally suffixed with git SHA) rather than a sibling-repo SHA, but the label is stable.
 
-If the user skipped step-5 (skill-only install), there is no case-study `GDLC.md` to write into — skip this step silently. The sibling SHA lives only in the case-study stub; skill-only consumers rely on `/gdlc-update` running `diff -q` against the live sibling instead.
+If the user skipped step-5 (skill-only install), there is no case-study `GDLC.md` to write into — skip this step silently. Skill-only consumers rely on `/gdlc-update` running `npx claude-gdlc-wizard check` instead of reading metadata.
 
 ### step-7 — Verify
 
 Confirm:
-- All four skill files (`gdlc`, `gdlc-setup`, `gdlc-update`, `gdlc-feedback`) exist under `.claude/skills/` and each `diff -q` matches its sibling counterpart in `~/gdlc/`.
+- All four skill files (`gdlc`, `gdlc-setup`, `gdlc-update`, `gdlc-feedback`) exist under `.claude/skills/` and `npx claude-gdlc-wizard check` reports MATCH for each.
 - `.gdlc/feedback-log.md` exists (unless `skill-only`) with the header row.
 - `.gdlc/feedback-drafts/` is listed in `.gitignore` (unless `skill-only`).
 - `GDLC.md` at project root exists (unless `skill-only`) and contains the expected metadata comments.
@@ -183,8 +186,8 @@ Confirm:
 Final report:
 
 ```
-GDLC v0.4.1 installed.
-  skills:     .claude/skills/{gdlc, gdlc-setup, gdlc-update, gdlc-feedback}/SKILL.md (sha <sha>)
+GDLC v<VERSION> installed.
+  skills:     .claude/skills/{gdlc, gdlc-setup, gdlc-update, gdlc-feedback}/SKILL.md (source <source-id>)
   case-study: GDLC.md (project=<name>, surfaces=<list>)
   feedback:   .gdlc/feedback-log.md (empty, ready)
 
@@ -207,17 +210,16 @@ Next:
 
 1. **Never ask what scanning revealed.** Confirm in bulk; ask only true unknowns (names, opt-in preferences).
 2. **Never overwrite an existing case-study `GDLC.md`.** The project's ratchet history is sacred. If one exists, prompt: *skill-only install? or add metadata comments to your existing case study?* — never replace the body.
-3. **Never copy the playbook** (`~/gdlc/GDLC.md`) into the consumer project. Reference it; do not vendor it.
-4. **Record sibling SHA in metadata.** `/gdlc-update` uses it to compute rule-diffs and detect stale installs.
-5. **Fall back cleanly.** Missing sibling → tell user to clone. Dirty sibling → tell user to clean. Existing install → redirect to `/gdlc-update`.
+3. **Never copy the playbook into the consumer project.** Reference it via `claude-gdlc-wizard`'s `GDLC.md` (WebFetch); do not vendor it.
+4. **Record the source ID in metadata.** `/gdlc-update` uses it to compute rule-diffs and detect stale installs.
+5. **Fall back cleanly.** Wizard install missing → tell user to run `npx claude-gdlc-wizard init`. Existing install → redirect to `/gdlc-update`.
 6. **Match SDLC's confidence-driven principle.** The bar is: fewest-possible user prompts, all detection surfaced transparently, user always knows what was inferred vs confirmed.
 
 ## Failure Modes
 
-- **Sibling repo missing** — stop; user must clone.
-- **Sibling repo dirty** — stop; user must commit/stash in `~/gdlc/`.
+- **Wizard install missing** — stop; tell user to run `npx claude-gdlc-wizard init`.
 - **Consumer isn't a git repo** — GDLC expects commits per cycle. Stop and ask user to `git init` first.
-- **Existing `.claude/skills/gdlc/SKILL.md`** — do not overwrite; redirect to `/gdlc-update`.
+- **Existing `.claude/skills/gdlc/SKILL.md` reports CUSTOMIZED in step-4** — redirect to `/gdlc-update` to triage.
 - **Existing `.gdlc/feedback-log.md` (not empty)** — leave it alone; this is the append-only traceability log and overwriting it destroys history.
 - **Existing `.gdlc/feedback-log.md` (empty / header-only)** — safe to leave; idempotent scaffold logic skips re-creation.
 - **Existing `GDLC.md` without metadata comments** — legacy install; offer to add metadata in place, keep body untouched, mark as `step-6` complete.

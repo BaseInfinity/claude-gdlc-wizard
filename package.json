@@ -1,6 +1,6 @@
 {
   "name": "claude-gdlc-wizard",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "GDLC enforcement for Claude Code — persona-driven playtest cycles, triangulated findings, ratchet-only-tightens. Sibling to claude-sdlc-wizard, for games instead of code.",
   "bin": {
     "gdlc-wizard": "cli/bin/gdlc-wizard.js"
@@ -28,7 +28,7 @@
     "url": "git+https://github.com/BaseInfinity/claude-gdlc-wizard.git"
   },
   "bugs": {
-    "url": "https://github.com/BaseInfinity/gdlc/issues"
+    "url": "https://github.com/BaseInfinity/claude-gdlc-wizard/issues"
   },
   "homepage": "https://github.com/BaseInfinity/claude-gdlc-wizard#readme",
   "author": {

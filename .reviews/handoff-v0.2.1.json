@@ -1,0 +1,64 @@
+{
+  "review_id": "v0.2.1-skill-migration",
+  "status": "CERTIFIED",
+  "final_score": 9,
+  "final_round": 2,
+  "round": 2,
+  "release": "0.2.1",
+  "date": "2026-04-25",
+  "previous_release": {
+    "version": "0.2.0",
+    "final_score": 9,
+    "review_id": "v0.2.0-path-a"
+  },
+  "mission": "Validate v0.2.1 skill behavioral migration. The four /gdlc* skills + CLI + supporting docs were migrated from runtime ~/gdlc/ filesystem references to project-local paths + `npx claude-gdlc-wizard check` (drift) + WebFetch (CHANGELOG/playbook from raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/). The transitional sibling-clone prerequisite is removed. Version bumped 0.2.0 → 0.2.1.",
+  "success": "Reviewer reads each modified skill file, verifies the new flows are coherent end-to-end (an existing v0.2.0 consumer can run /gdlc-update and land in a valid v0.2.1 state without any ~/gdlc/ on disk), and confirms zero legacy references remain in the test-gated scope (skills/ + CLAUDE_CODE_GDLC_WIZARD.md). Assertion count 99 holds across all 5 suites.",
+  "failure": "A skill silently still relies on a ~/gdlc/ filesystem read at some code path the forbidden-pattern test missed (e.g., a literal hard-coded path inside a fenced bash block that the test doesn't grep for). Or the `BaseInfinity/gdlc([^-]|$)` regex false-positives on `BaseInfinity/claude-gdlc-wizard` (it shouldn't — the prefix differs — but please verify). Or the npm tarball is missing some artifact (test_package_files_includes_hooks should have caught hooks/ but verify GDLC.md/skills/all manifests are actually shipping).",
+  "files_changed": [
+    "skills/gdlc/SKILL.md",
+    "skills/gdlc-setup/SKILL.md",
+    "skills/gdlc-update/SKILL.md",
+    "skills/gdlc-feedback/SKILL.md",
+    "cli/init.js",
+    "package.json",
+    ".claude-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "CLAUDE_CODE_GDLC_WIZARD.md",
+    "README.md",
+    "CLAUDE.md",
+    "ARCHITECTURE.md",
+    "TESTING.md",
+    "CHANGELOG.md",
+    "tests/test-skill-contracts.sh"
+  ],
+  "fixes_applied": [
+    "Finding 1 (P1) — gdlc-update step-7 rewritten as per-file apply (WebFetch + Write per 'adopt latest' decision; 'keep mine' = no-op; settings.json in-skill JSON merge). Regression: test_update_keep_mine_is_noop. Files: skills/gdlc-update/SKILL.md:127-150, tests/test-skill-contracts.sh:319-330.",
+    "Finding 2 (P2) — gdlc-update check-only always runs drift; early-exit only when version matches AND every file is MATCH. Regression: test_update_check_only_runs_drift. Files: skills/gdlc-update/SKILL.md:55-61, tests/test-skill-contracts.sh:332-342.",
+    "Finding 3 (P2) — gdlc-setup step-0.2 delegates to `npx claude-gdlc-wizard check` (full-surface verification, no partial test list). Regression: test_setup_step_0_2_delegates_to_cli_check. Files: skills/gdlc-setup/SKILL.md:35-43, tests/test-skill-contracts.sh:344-354.",
+    "Finding 4 (P2) — gdlc-feedback managed-files table updated: skill installed by CLI, not 'verbatim from sibling'. File: skills/gdlc-feedback/SKILL.md:186.",
+    "Finding 5 (P2) — Stale assertion counts in CLAUDE.md, TESTING.md, ARCHITECTURE.md updated to 102 (whole suite) and 27 (skill-contracts). Files: CLAUDE.md:24,57,61,103, TESTING.md:44,57,113,138, ARCHITECTURE.md:16,71,118."
+  ],
+  "previous_score": 7,
+  "round_history": [
+    {"round": 1, "score": 7, "outcome": "NOT CERTIFIED", "review_path": ".reviews/codex-review-v0.2.1-r1.md", "findings_count": 5},
+    {"round": 2, "score": 9, "outcome": "CERTIFIED", "review_path": ".reviews/codex-review-v0.2.1-r2.md", "findings_count": 0, "non_blocking_notes": ["wizard-doc lines 80+117 had stale `init --force` apply wording (fixed post-cert as housekeeping)", "regressions are markdown contract tests, not e2e simulations"]}
+  ],
+  "verification_checklist": [
+    "(a) skills/gdlc-feedback/SKILL.md — confirm zero `~/gdlc/` and zero `BaseInfinity/gdlc` (only `BaseInfinity/claude-gdlc-wizard`). Verify gh issue create + gh repo view + gh issue view all use the new repo.",
+    "(b) skills/gdlc-update/SKILL.md — read step-2 through step-9 end-to-end. Flag any logical gap (e.g., what does step-5 do if `npx claude-gdlc-wizard check` returns no managed files? what happens if WebFetch fails at step-2?).",
+    "(c) skills/gdlc-setup/SKILL.md step-0.2 verifies the wizard install. Confirm the test list (5 file checks) matches what `cli/init.js::FILES` actually places.",
+    "(d) skills/gdlc/SKILL.md — confirm the playbook URL `https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/GDLC.md` is correct and the file actually exists at that path on main (sanity check the URL resolves logically).",
+    "(e) tests/test-skill-contracts.sh — confirm the new regex `BaseInfinity/gdlc([^-]|$)` correctly excludes `BaseInfinity/claude-gdlc-wizard` (which contains `gdlc-wizard` not preceded by `BaseInfinity/gdlc`).",
+    "(f) tests/test-skill-contracts.sh — confirm `test_update_uses_npx_check_for_drift` actually passes against the new `gdlc-update/SKILL.md` (grep for `npx claude-gdlc-wizard check` should find a match).",
+    "(g) CLAUDE_CODE_GDLC_WIZARD.md — read top-to-bottom. Flag any internal contradiction (e.g., one section says `~/gdlc/`, another says project-local). Confirm 0 legacy references via `grep -nE \"~/gdlc/|BaseInfinity/gdlc([^-]|\\$)\" CLAUDE_CODE_GDLC_WIZARD.md`.",
+    "(h) Version parity: package.json::version, .claude-plugin/plugin.json::version, .claude-plugin/marketplace.json::plugins[0].version, and CHANGELOG.md topmost `## [0.2.1]` all read 0.2.1.",
+    "(i) package.json::files — confirm the array includes `cli/`, `skills/`, `hooks/`, `.claude-plugin/`, `CLAUDE_CODE_GDLC_WIZARD.md`, `CHANGELOG.md`, `README.md`. Note: `GDLC.md` is intentionally NOT shipped — skills WebFetch it from raw URL.",
+    "(j) package.json::bugs.url — confirm flipped from `BaseInfinity/gdlc/issues` to `BaseInfinity/claude-gdlc-wizard/issues`.",
+    "(k) cli/init.js post-install message — confirm 'Clone the sibling playbook' line removed; remaining steps are 1) Restart Claude Code, 2) Run /gdlc-setup, 3) Run /gdlc <task>.",
+    "(l) Run all 5 test suites end-to-end. Expected: cli=24, hooks=13, install-script=18, plugin=20, skill-contracts=24, total=99 passed, 0 failed. Use `git checkout -- hooks/` first if hooks/ files are missing (session quirk).",
+    "(m) CHANGELOG.md::[0.2.1] — verify the entry is internally accurate (every claim about what changed maps to a real diff)."
+  ],
+  "review_instructions": "You are an independent code reviewer performing a certification audit on v0.2.1 of `claude-gdlc-wizard`. The previous release (v0.2.0, Path A consolidation) was CERTIFIED 9/10 by you. This release completes the Path A migration by removing the transitional `~/gdlc/` runtime dependency. Read .reviews/preflight-v0.2.1-skill-migration.md for the author's self-review of what changed and known limitations. Be strict — assume bugs may be present until proven otherwise. Verify each checklist item with explicit evidence (file:line, grep results, test output). Output each finding with: ID (1, 2, ...), severity (P0/P1/P2), evidence, and a 'certify condition' (what specific change resolves it). Do NOT raise speculative or stylistic findings — every finding needs an evidence anchor (file:line). Re-verify any v0.2.0 passes still hold (no regression in Path A consolidation). End with: score (1-10), CERTIFIED or NOT CERTIFIED.",
+  "preflight_path": ".reviews/preflight-v0.2.1-skill-migration.md",
+  "artifact_path": ".reviews/v0.2.1/"
+}

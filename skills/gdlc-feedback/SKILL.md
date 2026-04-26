@@ -1,6 +1,6 @@
 ---
 name: gdlc-feedback
-description: Structured feedback channel from a GDLC consumer project back to the upstream playbook. Files a well-formed GitHub issue on BaseInfinity/gdlc with auto-attached case-study context (privacy-gated) and appends a traceability row to .gdlc/feedback-log.md. Never touches the consumer's GDLC.md body.
+description: Structured feedback channel from a GDLC consumer project back to the upstream playbook. Files a well-formed GitHub issue on BaseInfinity/claude-gdlc-wizard with auto-attached case-study context (privacy-gated) and appends a traceability row to .gdlc/feedback-log.md. Never touches the consumer's GDLC.md body.
 argument-hint: [earned-rule | gap | bug | wizard-bug | question | dry-run]
 effort: high
 ---
@@ -13,19 +13,19 @@ $ARGUMENTS
 
 ## MANDATORY FIRST ACTION: Read the Wizard Doc
 
-**Before doing ANYTHING else**, use the Read tool to read `~/gdlc/CLAUDE_CODE_GDLC_WIZARD.md` — especially the "Managed files", "URLs", and feedback-related sections. It contains the canonical type → label map, the auto-context allowlist, and the upstream repo target. Do NOT proceed without reading it first.
+**Before doing ANYTHING else**, use the Read tool to read `CLAUDE_CODE_GDLC_WIZARD.md` at the consumer project root — especially the "Managed files", "URLs", and feedback-related sections. It contains the canonical type → label map, the auto-context allowlist, and the upstream repo target. Do NOT proceed without reading it first.
 
-If the sibling repo is missing (`~/gdlc/` doesn't exist), stop and tell the user:
+If `CLAUDE_CODE_GDLC_WIZARD.md` is missing from the project root, the wizard wasn't installed. Stop and tell the user:
 
 ```bash
-git clone https://github.com/BaseInfinity/gdlc ~/gdlc
+npx claude-gdlc-wizard init
 ```
 
 ## Purpose
 
 Close the upstream feedback loop. With setup + update shipped, each consumer has its own case study that discovers its own earned rules, playbook gaps, and wizard bugs. Without a structured feedback channel those signals decay locally and framework-graduation becomes invisible to the playbook author.
 
-`/gdlc-feedback` files a well-structured GitHub issue against `BaseInfinity/gdlc` with privacy-gated auto-context, then appends one row to the consumer's `.gdlc/feedback-log.md` as a traceability record. It **never** writes to the consumer's `GDLC.md` body.
+`/gdlc-feedback` files a well-structured GitHub issue against `BaseInfinity/claude-gdlc-wizard` with privacy-gated auto-context, then appends one row to the consumer's `.gdlc/feedback-log.md` as a traceability record. It **never** writes to the consumer's `GDLC.md` body.
 
 ## Feedback types (canonical)
 
@@ -77,7 +77,7 @@ Follow these steps IN ORDER. Do not skip or combine steps.
 
 ### step-0.1 — Read Wizard Doc
 
-Read `~/gdlc/CLAUDE_CODE_GDLC_WIZARD.md` (done above — this is the mandatory first action).
+Read `CLAUDE_CODE_GDLC_WIZARD.md` at the consumer project root (done above — this is the mandatory first action).
 
 ### step-1 — Read Consumer Metadata + Snapshot Hash
 
@@ -101,7 +101,7 @@ Verify in this order — abort with a specific next-step message on the first fa
 5. **Account mismatch check.** If the authed user differs from a previously recorded feedback account (or an expected-account override), warn with both values and require explicit `yes` to continue or `switch` to abort.
 6. **Upstream reachable and not archived.**
    ```bash
-   gh repo view BaseInfinity/gdlc --json isArchived,visibility
+   gh repo view BaseInfinity/claude-gdlc-wizard --json isArchived,visibility
    ```
    Archived → stop ("feedback channel is closed"). 404 / private-unreachable → stop ("check repo access"). Network error → offer `dry-run` to save the body locally.
 
@@ -143,7 +143,7 @@ Title convention: `[<type>] <one-line summary>`.
 - **`H1 ≠ H2`** → metadata changed mid-flow (most likely `/gdlc-update` ran concurrently). Abort filing. Save the drafted body + type-specific answers to `.gdlc/feedback-drafts/<ISO-timestamp>.md` for recovery. Tell the user: "GDLC.md metadata changed during this flow (likely a concurrent `/gdlc-update`). Re-run `/gdlc-feedback` to capture fresh context — your draft is at `.gdlc/feedback-drafts/<ts>.md`."
 - **`H1 = H2`** → proceed. Resolve the label via the canonical type → label map; file via `gh`:
   ```bash
-  gh issue create -R BaseInfinity/gdlc \
+  gh issue create -R BaseInfinity/claude-gdlc-wizard \
     --title "<title>" \
     --body "<body>" \
     --label "<label_for_type>"
@@ -155,7 +155,7 @@ Title convention: `[<type>] <one-line summary>`.
 Round-trip to confirm the issue exists and labels were applied:
 
 ```bash
-gh issue view <number> -R BaseInfinity/gdlc --json number,labels,url
+gh issue view <number> -R BaseInfinity/claude-gdlc-wizard --json number,labels,url
 ```
 
 - If the issue exists and the expected label is present → proceed to step-7.
@@ -183,7 +183,7 @@ The log is append-only. The skill **never** rewrites existing rows and **never**
 
 | Path | Created by | Behavior under `/gdlc-feedback` |
 |------|------------|-------------------------------|
-| `.claude/skills/gdlc-feedback/SKILL.md` | `/gdlc-setup` | Installed verbatim from sibling; drift-detected by `/gdlc-update`. Not mutated by feedback. |
+| `.claude/skills/gdlc-feedback/SKILL.md` | `npx claude-gdlc-wizard init` (the CLI) | Installed by the CLI from this repo; drift-detected by `/gdlc-update` via `npx claude-gdlc-wizard check`. Not mutated by feedback. |
 | `.gdlc/feedback-log.md` | `/gdlc-setup` on fresh install; `/gdlc-update` migration for pre-v0.4.0 consumers | Append-only. The only file feedback writes to under the happy path. |
 | `.gdlc/feedback-drafts/<ts>.md` | `/gdlc-feedback` on cancel-mid-flow or race-check-abort | Transient; `.gitignore`d. Recovers partial prompt answers. Pruned at the top of subsequent runs if older than 14 days. |
 | `GDLC.md` | `/gdlc-setup` | **Never mutated by feedback.** Read-only from this skill's perspective. |
@@ -198,8 +198,8 @@ The log is append-only. The skill **never** rewrites existing rows and **never**
 - **Rate limit** → back off + print body for retry. Do NOT append to the log.
 
 ### Upstream repo state
-- **`BaseInfinity/gdlc` archived** → stop; tell user feedback channel is closed.
-- **`BaseInfinity/gdlc` private / 404** → stop; tell user to check access.
+- **`BaseInfinity/claude-gdlc-wizard` archived** → stop; tell user feedback channel is closed.
+- **`BaseInfinity/claude-gdlc-wizard` private / 404** → stop; tell user to check access.
 - **Issue-create permission denied (403)** → stop; print body for manual submission. **Do not** fall back to filing in the consumer's own repo (Anti-goal #7).
 
 ### Consumer state
@@ -226,7 +226,7 @@ The log is append-only. The skill **never** rewrites existing rows and **never**
 
 ## Anti-goals
 
-1. **No auto-graduation.** The skill files issues; it never edits the upstream `~/gdlc/GDLC.md` playbook.
+1. **No auto-graduation.** The skill files issues; it never edits the upstream `GDLC.md` playbook in `claude-gdlc-wizard`.
 2. **No cross-project feedback aggregation.** Each consumer files its own issues. No telemetry, no central rollup.
 3. **No silent filing.** Every issue: preview + per-field CONFIRM + overall confirm. No `--yes`.
 4. **No credential handling.** Delegated to `gh`.

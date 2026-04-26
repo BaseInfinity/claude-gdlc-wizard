@@ -3,23 +3,17 @@
 ## System overview
 
 ```
-                         ┌───────────────────────────────────┐
-                         │  BaseInfinity/gdlc   (playbook)   │
-                         │  ~/gdlc/  — GDLC.md + CHANGELOG   │
-                         └──────────────┬────────────────────┘
-                                        │ read-only sibling dependency
-                                        │ (skills read this; never bundled)
-                                        ▼
  ┌────────────────────────────────────────────────────────────────────────┐
- │  BaseInfinity/claude-gdlc-wizard   (this repo — distribution)         │
+ │  BaseInfinity/claude-gdlc-wizard   (this repo — single source)        │
  │                                                                        │
- │   skills/     ◀─── ported verbatim from ~/gdlc/.claude/skills/        │
+ │   GDLC.md     ◀─── playbook (cycles, personas, rubrics, rules)        │
+ │   skills/     ◀─── 4 SKILL.md files (gdlc, gdlc-setup, etc.)          │
  │   hooks/      ◀─── 2 enforcement hooks + 1 sourced helper              │
  │   cli/        ◀─── Node CLI: init / check / --force / --dry-run / JSON │
  │   install.sh  ◀─── curl|bash bootstrap → npx claude-gdlc-wizard        │
  │   .claude-plugin/  ◀─── plugin.json + marketplace.json                 │
  │   CLAUDE_CODE_GDLC_WIZARD.md  ◀─── canonical wizard doc (shipped)      │
- │   tests/      ◀─── 5 bash suites, 96 assertions, CI-gated              │
+ │   tests/      ◀─── 5 bash suites, 102 assertions, CI-gated             │
  │   .reviews/   ◀─── per-release preflight + Codex handoff               │
  └──────────────────────────────┬─────────────────────────────────────────┘
                                 │  distribution channels
@@ -74,7 +68,7 @@ claude-gdlc-wizard/
 │   ├── test-hooks.sh          — hook behavior    (13 assertions)
 │   ├── test-install-script.sh — install.sh      (18 assertions)
 │   ├── test-plugin.sh         — plugin + CLI parity (20 assertions)
-│   └── test-skill-contracts.sh— Prove-It-Gate   (21 assertions)
+│   └── test-skill-contracts.sh— Prove-It-Gate   (27 assertions)
 ├── CHANGELOG.md
 ├── CLAUDE.md                  — Claude instructions for developing THIS repo
 ├── CLAUDE_CODE_GDLC_WIZARD.md — wizard doc SHIPPED to consumers
@@ -90,7 +84,7 @@ claude-gdlc-wizard/
 
 ### `skills/` (the payload)
 
-Four markdown files with YAML frontmatter. Consumers invoke them as `/gdlc`, `/gdlc-setup`, `/gdlc-update`, `/gdlc-feedback`. These are ported verbatim from `~/gdlc/.claude/skills/` — the upstream playbook repo — and kept byte-identical via test-skill-contracts.sh. **Do not edit skills in this repo without a synchronized update to `~/gdlc/`**, otherwise drift accumulates between the playbook and the distribution.
+Four markdown files with YAML frontmatter. Consumers invoke them as `/gdlc`, `/gdlc-setup`, `/gdlc-update`, `/gdlc-feedback`. The skills run inside the consumer project, read `CLAUDE_CODE_GDLC_WIZARD.md` from the project root (CLI installs it there), use `npx claude-gdlc-wizard check` for drift detection, and WebFetch the upstream CHANGELOG / playbook from canonical raw URLs. No sibling-repo dependency. Skill contracts are validated by `test-skill-contracts.sh`.
 
 ### `hooks/` (enforcement at session boundaries)
 
@@ -121,7 +115,7 @@ Node 18+, CommonJS, zero runtime deps. Two files do the real work:
 
 ### `tests/` (the compliance gate)
 
-5 bash suites, 96 assertions, integration-heavy, zero mocks. See `TESTING.md` for the per-suite breakdown. CI runs all 5 on every push + PR.
+5 bash suites, 102 assertions, integration-heavy, zero mocks. See `TESTING.md` for the per-suite breakdown. CI runs all 5 on every push + PR.
 
 ### `.reviews/` (per-release QA)
 
@@ -145,9 +139,11 @@ Every significant release ships with `preflight-<release>.md` (self-review) and 
 
 Framework playbook (`GDLC.md`, `ROADMAP.md`, `FEEDBACK_SKILL_SPEC.md`, `PLAYBOOK_CHANGELOG.md`) lives in this repo's root. Same single-repo pattern SDLC uses (`claude-sdlc-wizard` is the only SDLC repo — there's no separate `~/sdlc/` framework repo).
 
-`BaseInfinity/gdlc` is deprecated as of `cbe57ed` (2026-04-25); it carries a `DEPRECATED.md` pointer to this repo. GitHub-archive of that repo is gated on completion of the skill behavioral migration (next paragraph).
+`BaseInfinity/gdlc` is deprecated as of `cbe57ed` (2026-04-25); it carries a `DEPRECATED.md` pointer to this repo. GitHub-archive of that repo is gated on user authorization.
 
-**Pending transitional state (skill migration queued for v0.2.x):** skills' runtime references to `~/gdlc/` haven't all flipped to local-repo paths yet. `gdlc-update` still does drift detection against `~/gdlc/.claude/skills/`, `gdlc-feedback` still files issues at `BaseInfinity/gdlc/issues`, etc. Both `~/gdlc/` (legacy clone) and `~/claude-gdlc-wizard/` work transitionally. The migration commit will collapse the runtime references to single-repo paths and deprecate the legacy clone requirement.
+### Skill behavioral migration (v0.2.1, 2026-04-25)
+
+Skills now read from project-local paths (`CLAUDE_CODE_GDLC_WIZARD.md` at the consumer project root, installed by the CLI), use `npx claude-gdlc-wizard check` for drift detection, and WebFetch the upstream CHANGELOG / playbook from `raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/`. No `~/<sibling>/` clone is required — the wizard is fully self-contained. Issue tracker for `/gdlc-feedback` is `BaseInfinity/claude-gdlc-wizard`.
 
 ### Plugin-mode vs CLI-mode path-prefix split
 
@@ -171,5 +167,5 @@ SDLC's CLI init omits its analogous helper — CLI-installed hooks then fail at 
 - `TESTING.md` — test strategy + per-suite breakdown
 - `CLAUDE.md` — project overview + code-style + session quirks
 - `CLAUDE_CODE_GDLC_WIZARD.md` — the wizard doc shipped to consumers
-- `~/gdlc/ROADMAP.md` — Phase 1/2/3 distribution plan (Codex adapter, gh extension, Homebrew tap)
+- `ROADMAP.md` — Phase 1/2/3 distribution plan (Codex adapter, gh extension, Homebrew tap)
 - `~/xdlc/README.md` §Repo Map + §Proven Patterns — ecosystem context

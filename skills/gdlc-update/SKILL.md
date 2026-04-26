@@ -1,6 +1,6 @@
 ---
 name: gdlc-update
-description: Smart update for the /gdlc skill — reads CHANGELOG, shows rule diff, runs drift detection, applies changes selectively while preserving the project's case-study GDLC.md.
+description: Smart update for the /gdlc skill — reads CHANGELOG, shows rule diff, runs drift detection via the wizard CLI, applies changes selectively while preserving the project's case-study GDLC.md.
 argument-hint: [check-only | apply | force-all]
 effort: high
 ---
@@ -13,13 +13,13 @@ $ARGUMENTS
 
 ## MANDATORY FIRST ACTION: Read the Wizard Doc
 
-**Before doing ANYTHING else**, use the Read tool to read `~/gdlc/CLAUDE_CODE_GDLC_WIZARD.md` — especially the "Staying updated (idempotent wizard)", "URLs", and "Managed files" sections. It contains the step registry, version-tracking format, and drift-detection rules. Do NOT proceed without reading it first.
+**Before doing ANYTHING else**, use the Read tool to read `CLAUDE_CODE_GDLC_WIZARD.md` at the consumer project root — especially the "Staying updated (idempotent wizard)", "URLs", and "Managed files" sections. It contains the step registry, version-tracking format, and drift-detection rules. Do NOT proceed without reading it first.
 
-If `~/gdlc/` is missing, fall back to WebFetch against the raw GitHub URLs listed in the wizard doc. If both fail (offline, no sibling), stop and tell the user to clone `BaseInfinity/gdlc` into `~/gdlc/`.
+If `CLAUDE_CODE_GDLC_WIZARD.md` is missing from the project root, the wizard wasn't installed. Stop and tell the user to run `npx claude-gdlc-wizard init` first.
 
 ## Purpose
 
-Update the installed `/gdlc` skill against the sibling playbook at `~/gdlc/`. Show what playbook rules are new since the last sync, run per-file drift detection, and apply changes selectively. NEVER overwrite the consumer project's case-study `GDLC.md` body — only update its metadata header.
+Update the installed `/gdlc` skill against the latest published version of `claude-gdlc-wizard`. Show what playbook rules are new since the last sync, run per-file drift detection via the wizard CLI, and apply changes selectively. NEVER overwrite the consumer project's case-study `GDLC.md` body — only update its metadata header.
 
 ## Execution Checklist
 
@@ -27,7 +27,7 @@ Follow these steps IN ORDER. Do not skip or combine steps.
 
 ### step-0.1 — Read Wizard Doc
 
-Read `~/gdlc/CLAUDE_CODE_GDLC_WIZARD.md` (done above — mandatory first action).
+Read `CLAUDE_CODE_GDLC_WIZARD.md` at the consumer project root (done above — mandatory first action).
 
 ### step-1 — Read Installed Version
 
@@ -35,41 +35,30 @@ Read the consumer project's `GDLC.md` at project root. Extract:
 
 ```markdown
 <!-- GDLC Wizard Version: X.Y.Z -->
-<!-- GDLC Sibling SHA: <short-sha> -->
+<!-- GDLC Sibling SHA: <short-sha-or-version> -->
 ```
 
 If no version comment exists, treat as `0.0.0` (first-time setup). Redirect the user to `/gdlc-setup`.
 
-If no `GDLC.md` at project root but `.claude/skills/gdlc/SKILL.md` exists, this is a skill-only install — proceed, but skip the metadata-update steps (step-8). Drift detection still runs against the sibling.
+If no `GDLC.md` at project root but `.claude/skills/gdlc/SKILL.md` exists, this is a skill-only install — proceed, but skip the metadata-update steps (step-8). Drift detection still runs.
 
-### step-2 — Pull Sibling Repo
+### step-2 — Fetch Latest CHANGELOG
 
-Prefer local:
-```bash
-git -C ~/gdlc status --porcelain
+WebFetch the canonical CHANGELOG:
+
 ```
-If dirty, stop and tell the user to commit or stash in `~/gdlc/`.
-
-```bash
-git -C ~/gdlc pull --ff-only
+https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/CHANGELOG.md
 ```
 
-If `~/gdlc/` doesn't exist, fall back to WebFetch against the raw URLs from the wizard doc (CHANGELOG, skill, playbook). Note: fallback mode can report rule diffs but cannot cleanly classify DRIFT on the skill file — tell the user.
+If WebFetch fails (offline / network blocked), stop and tell the user to retry when connectivity is restored. There is no local-clone fallback in v0.2.1+.
 
-Capture new sibling SHA:
-```bash
-git -C ~/gdlc rev-parse --short HEAD
-```
+### step-3 — Read Latest Version
 
-### step-3 — Read Latest CHANGELOG
+Parse the topmost `## [X.Y.Z]` from the fetched CHANGELOG — that's the latest version.
 
-Prefer local `~/gdlc/CHANGELOG.md`; fall back to WebFetch from the raw URL if sibling missing.
+**If `check-only`:** always continue through step-5 to surface drift, regardless of version-match. Print report and stop after step-5.
 
-Parse the topmost `## [X.Y.Z]` — that's the latest version.
-
-**If installed version matches latest:** say "You're up to date! (version X.Y.Z)" and stop. Nothing else runs.
-
-**If `check-only`:** continue through step-5, print report, stop.
+**If `(none)` / `apply` / `force-all` AND installed version matches latest:** still run step-5 drift detection — a CUSTOMIZED skill on a current version is exactly what update needs to triage. Only say "You're up to date!" and stop early when both: (a) version matches latest AND (b) drift detection reports MATCH for every managed file.
 
 ### step-4 — Show Rule Diff
 
@@ -83,40 +72,40 @@ What changed:
 - [0.4.1] gdlc-feedback label map swap — custom feedback:* labels replaced with stock bug/enhancement/question (zero-setup on upstream)
 - [0.4.0] gdlc-feedback skill + .gdlc/feedback-log.md scaffold + SHA-256 race-check + privacy allowlist (AUTO/CONFIRM/EXCLUDED)
 - [0.3.0] Distribution-readiness: gdlc-setup + gdlc-update skills extracted, graduation criteria decoupled from distribution
-- [0.2.0] 12 new earned rules from codeguesser v0.11 ship + Playtest #18 (trust boundaries, determinism foundations, What's Working section)
-
-New earned rules in playbook (not yet in this project's case study):
-  - Rule #22: URL-param inputs are user-controlled — validate at the decoder boundary
-  - Rule #23: All-or-nothing decoding — one malformed field invalidates the whole payload
-  - Rule #28: Keep a "What's Working" section
-  (... list all rules added since installed version)
+- [0.2.1] Skill behavioral migration to local-repo paths — sibling-clone no longer required
+- [0.2.0] Path A consolidation — framework playbook moved into claude-gdlc-wizard
 ```
 
-Use `git -C ~/gdlc diff <old-sha>..<new-sha> -- GDLC.md` to extract added rule lines if the CHANGELOG is light on detail. The user decides whether any new rule warrants a playtest cycle in this project — that's a separate task, not this update.
+For new earned rules in the playbook, WebFetch the upstream playbook:
+
+```
+https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/GDLC.md
+```
+
+The user decides whether any new rule warrants a playtest cycle in this project — that's a separate task, not this update.
 
 ### step-5 — Drift Detection
 
-Classify each managed skill file in the suite. Run one `diff -q` per skill:
+Delegate to the wizard CLI — it already knows what's installed vs what should be:
 
 ```bash
-for skill in gdlc gdlc-setup gdlc-update gdlc-feedback; do
-  diff -q ~/gdlc/.claude/skills/$skill/SKILL.md .claude/skills/$skill/SKILL.md
-done
+npx claude-gdlc-wizard check
 ```
 
-Classification table (applies per file):
+The CLI reports each managed file as MATCH / CUSTOMIZED / MISSING / DRIFT against the locally installed CLI templates. If you need the latest published templates instead, fetch them via WebFetch and compare.
 
-| diff result | Classification | Notes |
-|-------------|----------------|-------|
-| Files identical | MATCH | Nothing to do |
-| Files differ AND installed file has a known `~/gdlc/` commit SHA in its content (rare — skill file doesn't embed SHA) | DRIFT or CUSTOMIZED | See below |
-| Files differ, no embedded marker | CUSTOMIZED | Show diff, ask |
-| Installed file missing | MISSING | Install it |
-| Installed file exists but is malformed (parse errors, missing frontmatter) | DRIFT | Investigate |
+Classification table (CLI output → action):
 
-For a CUSTOMIZED skill, read both files and present a human-readable diff summary: "what changed in the latest, what you have, what gets lost if you adopt."
+| CLI status | Classification | Notes |
+|------------|----------------|-------|
+| MATCH | MATCH | Nothing to do |
+| CUSTOMIZED | CUSTOMIZED | Show diff, ask |
+| MISSING | MISSING | Install it |
+| DRIFT | DRIFT | Investigate (e.g., missing executable bit) |
 
-Also classify `.gdlc/feedback-log.md` separately. It is not a `diff`-able managed file (append-only, consumer-owned content) — the update only checks presence:
+For a CUSTOMIZED skill, read both files (installed and the upstream raw URL) and present a human-readable diff summary: "what changed in the latest, what you have, what gets lost if you adopt."
+
+Also classify `.gdlc/feedback-log.md` separately. It is not a `diff`-able managed file (append-only, consumer-owned content) — only check presence:
 
 - **Present** → leave alone.
 - **Missing** → flag for the step-7.5 migration (pre-v0.4.0 consumers get the file created there, not here).
@@ -136,13 +125,22 @@ For each managed file, propose an action:
 
 ### step-7 — Apply
 
-For each approved action, copy the sibling file over and verify:
+Apply approved updates **per-file**, not via a global force. The wizard CLI's `init --force` overwrites every managed file unconditionally — that destroys any "keep mine" decisions from step-6. Honor the per-file plan instead by writing only the files the user approved:
 
-```bash
-# MISSING or CUSTOMIZED-adopt, per approved skill
-cp ~/gdlc/.claude/skills/<skill>/SKILL.md .claude/skills/<skill>/SKILL.md
-diff -q ~/gdlc/.claude/skills/<skill>/SKILL.md .claude/skills/<skill>/SKILL.md
-```
+For each file the user chose **adopt latest** (or which is **MISSING**):
+
+1. WebFetch the latest content from the canonical raw URL (paths under `https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/`):
+   - Skills: `skills/<name>/SKILL.md`
+   - Hooks: `hooks/<name>.sh` and `hooks/hooks.json`
+   - Settings template: `cli/templates/settings.json`
+   - Wizard doc: `CLAUDE_CODE_GDLC_WIZARD.md`
+2. Write the fetched content to the corresponding `.claude/...` path (or project root for the wizard doc) using the Write tool.
+3. For hook scripts, run `chmod +x` on the destination to preserve the executable bit.
+4. For `.claude/settings.json`: NEVER overwrite blindly. Read the consumer's existing `settings.json`, parse it as JSON, replace only the wizard hook entries (those whose `command` references one of the wizard's hook script basenames — `gdlc-prompt-check.sh`, `instructions-loaded-check.sh`) with the entries from the fetched template, preserve every other field and every other hook entry, and Write the result back. This in-skill merge mirrors `cli/init.js::mergeSettings` semantics and avoids the global force-apply pitfall.
+
+For each file the user chose **keep mine**: do nothing. The CUSTOMIZED state persists by design — that's the entire point of the per-file plan in step-6.
+
+For files marked **DRIFT**: do not touch automatically. Surface the state to the user and ask for explicit triage (e.g., for a missing executable bit, prompt to `chmod +x` and nothing else).
 
 NEVER touch the consumer's `GDLC.md` body. Only the metadata header in step-8.
 
@@ -170,31 +168,42 @@ In the consumer's `GDLC.md`, update four fields of the five-line canonical metad
 
 ```markdown
 <!-- GDLC Wizard Version: <new-version> -->   <-- bump
-<!-- GDLC Sibling SHA: <new-sha> -->           <-- bump
+<!-- GDLC Sibling SHA: <new-source-id> -->     <-- bump (npm version or git SHA — see below)
 <!-- GDLC Setup Date: <unchanged> -->          <-- preserve
 <!-- GDLC Last Update: <YYYY-MM-DD> -->        <-- bump (today)
-<!-- Completed Steps: <existing>, step-update-<sha> -->  <-- append
+<!-- Completed Steps: <existing>, step-update-<source-id> -->  <-- append
 ```
 
-Four fields change, one is preserved. Three "bump" fields (`Wizard Version`, `Sibling SHA`, `Last Update`) get replaced with new values. `Completed Steps` gains one new entry (`step-update-<sha>`) appended to the existing list — the prior list is preserved verbatim, only one token is appended. `Setup Date` MUST be preserved verbatim from the existing header. This step NEVER touches `GDLC.md` body content — only the metadata comment block.
+**Source ID source (the `<new-source-id>` value):** capture a stable identifier for the wizard install. In v0.2.1+, this is the npm version, optionally suffixed with a git SHA if the user has a local clone:
+
+```bash
+SOURCE_ID=$(npx claude-gdlc-wizard --version 2>/dev/null || echo "unknown")
+# Optional: append git SHA if a local clone exists
+if [ -d "$HOME/claude-gdlc-wizard/.git" ]; then
+  GIT_SHA=$(git -C "$HOME/claude-gdlc-wizard" rev-parse --short HEAD 2>/dev/null)
+  [ -n "$GIT_SHA" ] && SOURCE_ID="${SOURCE_ID}-${GIT_SHA}"
+fi
+```
+
+The field name `Sibling SHA` is preserved as-is for backward compatibility with existing case studies — the value semantics evolved with v0.2.1 (Path A consolidation), but the label is stable.
+
+Four fields change, one is preserved. Three "bump" fields (`Wizard Version`, `Sibling SHA`, `Last Update`) get replaced with new values. `Completed Steps` gains one new entry (`step-update-<source-id>`) appended to the existing list — the prior list is preserved verbatim, only one token is appended. `Setup Date` MUST be preserved verbatim from the existing header. This step NEVER touches `GDLC.md` body content — only the metadata comment block.
 
 If this is a skill-only install (no case-study `GDLC.md`), skip step-8.
 
 ### step-9 — Verify
 
-Re-run drift detection across the full suite:
+Re-run drift detection via the CLI:
 
 ```bash
-for skill in gdlc gdlc-setup gdlc-update gdlc-feedback; do
-  diff -q ~/gdlc/.claude/skills/$skill/SKILL.md .claude/skills/$skill/SKILL.md
-done
+npx claude-gdlc-wizard check
 ```
 
-Expected: identical for every skill that was updated. Files the user chose to skip remain CUSTOMIZED — that's their choice.
+Expected: every managed file reports MATCH for files the user updated. Files the user chose to skip remain CUSTOMIZED — that's their choice.
 
 Verify `.gdlc/feedback-log.md` exists and `.gdlc/feedback-drafts/` is in `.gitignore`.
 
-Check case-study metadata has the new version + SHA.
+Check case-study metadata has the new version + source ID.
 
 Final report:
 
@@ -202,7 +211,7 @@ Final report:
 GDLC updated <old-version> → <new-version>.
   skills:          gdlc MATCH, gdlc-setup MATCH, gdlc-update MATCH, gdlc-feedback MATCH
   .gdlc/ scaffold: feedback-log.md present, feedback-drafts/ gitignored
-  case-study:      version + sha bumped
+  case-study:      version + source ID bumped
 
 New rules available (see step-4 for full list): <N>
 Next: /gdlc <task> to kick off a playtest cycle against the new rules,
@@ -219,18 +228,17 @@ Next: /gdlc <task> to kick off a playtest cycle against the new rules,
 ## Rules
 
 1. **NEVER modify the consumer project's `GDLC.md` body.** That's the project's ratchet ledger — only the metadata header is managed.
-2. **NEVER touch `~/gdlc/GDLC.md` from the consumer project.** Playbook edits happen in the sibling repo.
+2. **NEVER vendor the playbook.** The upstream playbook lives in `claude-gdlc-wizard`'s `GDLC.md`. Reference it; do not copy it into the consumer project.
 3. **NEVER auto-apply without showing what will change first** (unless `force-all` was passed, and only then for CUSTOMIZED — DRIFT still requires user triage).
 4. **Respect customizations.** When a file is CUSTOMIZED, show the diff and let the user decide — don't pressure them.
-5. **Offline fallback:** if `~/gdlc/` is missing and WebFetch fails, stop. Tell the user to clone the sibling repo. Do not try to reconstruct.
-6. **SHA is the source of truth for "last seen playbook".** Don't rely on dates or version strings alone — commit SHAs don't lie.
+5. **Offline behavior:** WebFetch is required for CHANGELOG / playbook diff. If WebFetch fails, stop and tell the user to retry. The CLI's `check` works offline (uses installed templates).
+6. **Source ID is the stable identifier.** Don't rely on dates or version strings alone — the source ID captured at update time is the audit anchor.
 7. **First-time users:** if no `.claude/skills/gdlc/SKILL.md` exists, stop and redirect to `/gdlc-setup`.
 
 ## Failure Modes
 
-- **Sibling repo missing** — stop; tell the user to clone. (Or fall back to WebFetch for rule-diff only; skill updates require sibling presence.)
-- **Sibling repo dirty** — stop; tell the user to commit/stash in `~/gdlc/`.
-- **`git pull --ff-only` fails (divergence)** — stop; tell user to resolve in `~/gdlc/` manually.
+- **CLI not installed** — `npx claude-gdlc-wizard` fails. Tell the user to install Node ≥ 18 and re-run.
+- **WebFetch fails** — stop; tell the user to retry when connectivity is restored.
 - **Skill file DRIFT** — surface state (size, mtime, content sample); do not guess at the right fix.
 - **No `GDLC.md` metadata comments** — legacy install; offer to add them (run `/gdlc-setup regenerate` to wire metadata without re-scaffolding).
-- **Installed version ahead of latest** — unusual; user has been editing the sibling repo directly. Surface it; do not downgrade.
+- **Installed version ahead of latest** — unusual; user has been running off a local clone or pre-release. Surface it; do not downgrade.

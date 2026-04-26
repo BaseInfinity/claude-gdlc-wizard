@@ -21,7 +21,7 @@ This is a **meta-repository**. It contains the distribution machinery for the GD
 - `install.sh` — `curl | bash` bootstrap pointed at `npx claude-gdlc-wizard`.
 - `.claude-plugin/{plugin.json,marketplace.json}` — Claude Code plugin manifest + local marketplace listing.
 - `CLAUDE_CODE_GDLC_WIZARD.md` — the canonical wizard doc shipped to consumers.
-- `tests/*.sh` — 5 bash test suites, 96 assertions (see TESTING.md).
+- `tests/*.sh` — 5 bash test suites, 102 assertions (see TESTING.md).
 - `.github/workflows/ci.yml` — runs the full test suite on push + PR.
 - `.reviews/` — preflight + Codex cross-model handoff per release.
 
@@ -29,7 +29,7 @@ This is a **meta-repository**. It contains the distribution machinery for the GD
 
 This repo is now the single home for both **framework playbook** (GDLC.md and friends) and **distribution wizard** (CLI, plugin, hooks, install scripts). Matches SDLC's pattern: `claude-sdlc-wizard` is the only SDLC repo too — there's no separate `~/sdlc/` framework repo.
 
-**Pending v0.2.x cleanup:** the skills still reference `~/gdlc/` for runtime reads (drift detection, CHANGELOG fetch URLs, issue-tracker URL in `gdlc-feedback`). Migration to local-repo paths is queued — held until a Codex round green-lights the v0.2.0 consolidation. Until then, both `~/gdlc/` (deprecated) and `~/claude-gdlc-wizard/` work; new installs should use the latter.
+**Skill behavioral migration shipped in v0.2.1 (2026-04-25):** skills now read from project-local paths (`CLAUDE_CODE_GDLC_WIZARD.md` at consumer project root, installed by the CLI), use `npx claude-gdlc-wizard check` for drift detection, and WebFetch the upstream CHANGELOG / playbook from canonical raw URLs. No sibling-repo clone required. The legacy `~/gdlc/` clone is unused going forward; `BaseInfinity/gdlc` GitHub-archive is gated on user authorization.
 
 ### What this repo does NOT contain
 
@@ -58,7 +58,7 @@ All tests are bash, run directly. `package.json` intentionally has no `scripts` 
 | `bash tests/test-hooks.sh` | Hook behavior (`_find-gdlc-root` walk-up, SETUP-vs-BASELINE emission, 13 assertions) |
 | `bash tests/test-install-script.sh` | Install-script structure (18 assertions; live-install gated by `CLAUDE_GDLC_WIZARD_NPM_PUBLISHED=1`) |
 | `bash tests/test-plugin.sh` | Plugin/CLI parity (plugin.json + marketplace.json validity, hooks.json events, path-prefix split, 20 assertions) |
-| `bash tests/test-skill-contracts.sh` | Prove-It-Gate contract tests across all 4 skills + wizard doc (21 assertions) |
+| `bash tests/test-skill-contracts.sh` | Prove-It-Gate contract tests across all 4 skills + wizard doc (27 assertions) |
 | `node cli/bin/gdlc-wizard.js --help` | Inspect the CLI surface |
 | `node cli/bin/gdlc-wizard.js init --dry-run` | Print the install plan without writing (safe to run anywhere) |
 | `cd $(mktemp -d) && node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js init` | Real install in a throwaway scratch dir |
@@ -100,7 +100,7 @@ See `ARCHITECTURE.md` for the full diagram and component boundaries.
 
 ## Testing
 
-See `TESTING.md`. Short version: this is a **meta-project**, so tests exercise wizard installation + script behavior + plugin parity, not application code. 96 assertions across 5 suites today; Prove-It-Gate discipline — no tautologies.
+See `TESTING.md`. Short version: this is a **meta-project**, so tests exercise wizard installation + script behavior + plugin parity, not application code. 102 assertions across 5 suites today; Prove-It-Gate discipline — no tautologies.
 
 ## Git / Commits
 
@@ -126,4 +126,4 @@ See `TESTING.md`. Short version: this is a **meta-project**, so tests exercise w
 - `ARCHITECTURE.md` — repo layout, distribution channels, key decisions
 - `CLAUDE_CODE_GDLC_WIZARD.md` — the **shipped** wizard doc (consumers read this; it's not about building the wizard, it's about using it)
 - `~/xdlc/README.md` — the XDLC meta-registry (the "why" behind this repo existing at all)
-- `~/gdlc/ROADMAP.md` — the full Phase 1/2/3 plan for the distribution graduation
+- `ROADMAP.md` — the full Phase 1/2/3 plan for the distribution graduation

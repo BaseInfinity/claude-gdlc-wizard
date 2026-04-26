@@ -209,9 +209,8 @@ ${YELLOW}Restart Claude Code${RESET} to load new hooks and skills:
 
 Next steps:
   1. Restart Claude Code (see above)
-  2. Clone the sibling playbook: ${CYAN}git clone https://github.com/BaseInfinity/gdlc ~/gdlc${RESET}
-  3. Run ${CYAN}/gdlc-setup${RESET} — auto-scans and scaffolds your GDLC.md
-  4. Run ${CYAN}/gdlc <task>${RESET} for your first playtest cycle
+  2. Run ${CYAN}/gdlc-setup${RESET} — auto-scans and scaffolds your GDLC.md
+  3. Run ${CYAN}/gdlc <task>${RESET} for your first playtest cycle
 
 The wizard doc is at: CLAUDE_CODE_GDLC_WIZARD.md
   `);

@@ -8,7 +8,7 @@ This wizard installs the GDLC skill suite into any Claude Code project: persona-
 
 ## Status
 
-**Shipped (v0.2.0, 2026-04-25).** Phase 1 CERTIFIED; framework playbook consolidated into this repo (Path A). Originally extracted from [BaseInfinity/gdlc](https://github.com/BaseInfinity/gdlc) on 2026-04-23 (now deprecated, see [DEPRECATED.md](https://github.com/BaseInfinity/gdlc/blob/main/DEPRECATED.md)). Case studies to date:
+**Shipped (v0.2.1, 2026-04-25).** Phase 1 CERTIFIED; framework playbook consolidated into this repo (Path A); skills migrated to local-repo paths (no sibling clone required). Originally extracted from [BaseInfinity/gdlc](https://github.com/BaseInfinity/gdlc) on 2026-04-23 (now deprecated, see [DEPRECATED.md](https://github.com/BaseInfinity/gdlc/blob/main/DEPRECATED.md)). Case studies to date:
 
 - **#1 codeguesser** — 17 playtests, 355+ regression tests, 26 earned rules (complete)
 - **#2 pdlc/TamAGI** — consuming now
@@ -23,21 +23,11 @@ This wizard installs the GDLC skill suite into any Claude Code project: persona-
 | `/gdlc` | during a feature cycle | Picks the right playtest cycle type (gameplay-matrix / art-craft-review / pipeline-contract-audit), runs persona agents, triangulates findings, promotes P0s to TDD RED |
 | `/gdlc-setup` | first install | Auto-scans your project, detects surfaces (gameplay / art / pipeline), scaffolds a case-study `GDLC.md`, installs the skill suite. Asks only what scanning can't reveal. |
 | `/gdlc-update` | periodically | Reads CHANGELOG, shows rule diffs, runs drift detection on managed files, applies updates selectively while preserving your `GDLC.md` |
-| `/gdlc-feedback` | when you hit a gap | Files structured issues upstream to [BaseInfinity/gdlc](https://github.com/BaseInfinity/gdlc) — earned-rule candidates, playbook gaps, wizard bugs, methodology questions. Stock GitHub labels. |
+| `/gdlc-feedback` | when you hit a gap | Files structured issues upstream to [BaseInfinity/claude-gdlc-wizard](https://github.com/BaseInfinity/claude-gdlc-wizard) — earned-rule candidates, playbook gaps, wizard bugs, methodology questions. Stock GitHub labels. |
 
 ## Install
 
-Pick whichever fits your environment. All four paths land the same surface: 4 skills + 2 hooks + helper + settings.json + wizard doc.
-
-### Prerequisite (every path, transitional): clone the legacy framework sibling
-
-> **Path A status:** the playbook now lives in this repo's root (`GDLC.md`). The skills still read `~/gdlc/` at runtime for drift detection + CHANGELOG fetch URLs + issue tracker — that behavioral migration is queued for v0.2.x. Until it ships, the legacy sibling clone is still required:
-
-```bash
-git clone https://github.com/BaseInfinity/gdlc ~/gdlc
-```
-
-Once skills migrate to local-repo paths, this step becomes optional, then is removed entirely. Track progress in [`CHANGELOG.md`](./CHANGELOG.md).
+Pick whichever fits your environment. All four paths land the same surface: 4 skills + 2 hooks + helper + settings.json + wizard doc. No sibling-repo clone required — the wizard is fully self-contained as of v0.2.1.
 
 ### Path 1 — `npx` (recommended)
 
@@ -96,7 +86,7 @@ SDLC without GDLC = clean code that produces boring games. GDLC without SDLC = f
 
 ## Contributing
 
-File feedback using `/gdlc-feedback` from a Claude Code session. It creates a structured GitHub issue on [BaseInfinity/gdlc](https://github.com/BaseInfinity/gdlc) with stock labels (`bug` / `enhancement` / `question`) and a `[<type>]` title prefix.
+File feedback using `/gdlc-feedback` from a Claude Code session. It creates a structured GitHub issue on [BaseInfinity/claude-gdlc-wizard](https://github.com/BaseInfinity/claude-gdlc-wizard) with stock labels (`bug` / `enhancement` / `question`) and a `[<type>]` title prefix.
 
 ## License
 
