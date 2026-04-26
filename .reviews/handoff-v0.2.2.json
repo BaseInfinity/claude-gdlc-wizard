@@ -1,0 +1,63 @@
+{
+  "review_id": "v0.2.2-issue-fixes",
+  "status": "PENDING_RECHECK",
+  "round": 2,
+  "release": "0.2.2",
+  "date": "2026-04-26",
+  "previous_release": {
+    "version": "0.2.1",
+    "final_score": 9,
+    "review_id": "v0.2.1-skill-migration"
+  },
+  "mission": "Validate v0.2.2, an issue-fix release that bundles four targeted regressions surfaced by the codeguesser case study (issues #1, #3, #4) and the codeguesser dual-install dogfooding session (issue #5). Two of the four are P1 user-state-corruption risks: #3 (gdlc-setup could clobber a pre-wizard GDLC.md on re-run) and #5 (hook filename collision between claude-gdlc-wizard and claude-sdlc-wizard caused whichever installed second to silently overwrite the other's hook). Version bump 0.2.1 → 0.2.2.",
+  "success": "Reviewer reads each modified file end-to-end and verifies (a) the 4 issues are actually closed by the code shown — not just papered over with surface checks — and (b) no v0.2.1 contract regressed. Specifically: step-0.5 cannot let a managed-install GDLC.md be overwritten by /gdlc-setup re-run; step-5.5 is idempotent across re-runs; the hook rename is complete (no live legacy references) and the namespace contract test would catch a future colliding hook; the jq detection in step-1 is actually scoped to dependency maps, not scripts.",
+  "failure": "A reviewer rubber-stamps without reading the step-0.5 prose, missing a fourth state where the wizard silently writes (e.g., GDLC.md exists with malformed metadata that doesn't match the regex but isn't 'absent' either). Or step-5.5's idempotency check is shallow — it re-appends bullets if the section header has different casing or whitespace. Or the namespace test only catches the legacy filename, not arbitrary future non-gdlc-prefixed hooks. Or assertion counts in the CHANGELOG don't match what `bash tests/*.sh` actually reports. Or the `git mv` rename loses history because the CLI was edited in the same commit and the rename detection broke (verify `git log --follow` on the new path still surfaces pre-rename commits).",
+  "files_changed": [
+    "skills/gdlc-setup/SKILL.md",
+    "CLAUDE_CODE_GDLC_WIZARD.md",
+    "hooks/hooks.json",
+    "hooks/instructions-loaded-check.sh -> hooks/gdlc-instructions-loaded-check.sh (git mv)",
+    "cli/init.js",
+    "cli/templates/settings.json",
+    "tests/test-cli.sh",
+    "tests/test-hooks.sh",
+    "tests/test-plugin.sh",
+    "tests/test-skill-contracts.sh",
+    "package.json",
+    ".claude-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "CHANGELOG.md",
+    "CLAUDE.md",
+    "ARCHITECTURE.md",
+    "TESTING.md"
+  ],
+  "fixes_applied": [
+    "F1 (P1, FIXED): cli/init.js — added LEGACY_HOOK_FILES + isLegacyHookEntry; mergeSettings strips legacy entries regardless of --force; planOperations emits REMOVE_LEGACY ops; check() flags legacy artifacts as DRIFT. skills/gdlc-update/SKILL.md step-7 mirrors the same logic. tests/test-cli.sh: 3 new regression tests (test_init_removes_legacy_hook_file, test_init_replaces_legacy_settings_entry, test_check_flags_legacy_hook_drift).",
+    "F2 (P2, FIXED): skills/gdlc-setup/SKILL.md step-5 Part B — three-row state table (Absent / Empty stub / Non-empty file) with explicit `[ ! -s GDLC.md ]` detection idiom. tests/test-skill-contracts.sh::test_setup_handles_zero_byte_gdlc_stub.",
+    "F3 (P2, FIXED): skills/gdlc-setup/SKILL.md step-5.5 — case-insensitive + whitespace-tolerant regex `^##[[:space:]]+[Rr]elated[[:space:]]+[Pp]laybooks[[:space:]]*$` documented inline. tests/test-skill-contracts.sh::test_setup_step_5_5_idempotency_is_tolerant. Existing test_setup_links_surrounding_playbooks regex relaxed to accept prose mentions of the section name.",
+    "F4 (P2, FIXED): CHANGELOG.md::[0.2.2]::Added — corrected to 13 new tests (10 contract + 3 CLI), whole-suite total 102 → 115.",
+    "F5 (P2, DISPUTED-PROCEDURAL): Auto-resolves on commit — `git mv` rename is staged, not yet committed at r1 review time. Round-2 reviewer should re-run `git log --follow -- hooks/gdlc-instructions-loaded-check.sh` after v0.2.2 commit lands.",
+    "F6 (P2, FIXED): hooks/_find-gdlc-root.sh:3 comment updated to reference gdlc-instructions-loaded-check.sh."
+  ],
+  "previous_score": 5,
+  "verification_checklist": [
+    "(a) skills/gdlc-setup/SKILL.md step-0.5 — read the full prose. Does it cover ALL four states a project might be in (managed-install, legacy-unmanaged, empty-stub, absent)? Is the legacy-unmanaged branch's three-option ASK actually defined (backup, treat-as-legacy, abort) or just hand-waved?",
+    "(b) skills/gdlc-setup/SKILL.md step-0.5 — verify the redirect is BEFORE any auto-scan write. Run `awk '/### step-0\\.5 /,/### step-1 /' skills/gdlc-setup/SKILL.md` and confirm step-0.5 ends before step-1 starts. Then `grep -n '^### step-' skills/gdlc-setup/SKILL.md` and confirm step-0.5 line < step-3 line.",
+    "(c) skills/gdlc-setup/SKILL.md step-5.5 — read the idempotency rules. What happens if a project has `## related playbooks` (lowercase) or `##  Related playbooks` (extra space) instead of canonical? Is the existence check tolerant or does it false-negative and double-append?",
+    "(d) skills/gdlc-setup/SKILL.md step-1 jq block — verify the actual command used parses ONLY .devDependencies and .dependencies, not .scripts. A script literally named `\"vitest-runner\": \"node bin/run.js\"` should NOT trigger vitest detection.",
+    "(e) hooks/hooks.json — confirm `command` field references `gdlc-instructions-loaded-check.sh`. Run `grep -n instructions-loaded-check hooks/hooks.json` — should show only the namespaced form.",
+    "(f) cli/templates/settings.json — same check. Run `grep -n instructions-loaded-check cli/templates/settings.json`.",
+    "(g) cli/init.js::FILES — verify the file inventory includes `hooks/gdlc-instructions-loaded-check.sh` and NOT the legacy `hooks/instructions-loaded-check.sh`. Also verify `init --force` would remove the legacy file if found on disk (drift detection should flag it).",
+    "(h) Verify `git log --follow hooks/gdlc-instructions-loaded-check.sh` surfaces commits prior to the rename — confirms `git mv` preserved history.",
+    "(i) tests/test-skill-contracts.sh — read the new assertions: test_setup_step_1_test_harness_detection_scoped_to_deps, test_setup_existing_install_early_redirect, test_setup_existing_install_redirect_before_writes, test_setup_links_surrounding_playbooks, test_wizard_doc_documents_playbook_linkage, test_no_hook_filename_collisions_with_sdlc, test_hooks_json_uses_namespaced_basenames, test_cli_settings_template_uses_namespaced_basenames. For each: would the assertion FAIL against pre-fix code? (TDD RED check.)",
+    "(j) tests/test-skill-contracts.sh::test_no_hook_filename_collisions_with_sdlc — confirm the assertion iterates over ALL `hooks/*.sh` files, not just the renamed one. A future hook added without the gdlc- prefix should fail this test.",
+    "(k) CLAUDE_CODE_GDLC_WIZARD.md setup step registry — confirm step-0.5 and step-5.5 rows are present and sit in line-number order between neighbors. Confirm both `<!-- Completed Steps:` blocks (registry + template example) include the new step IDs.",
+    "(l) Version parity: package.json::version, .claude-plugin/plugin.json::version, .claude-plugin/marketplace.json::plugins[0].version, and CHANGELOG.md topmost `## [0.2.2]` all read 0.2.2.",
+    "(m) Run all 5 test suites end-to-end. Use `git checkout -- hooks/ && for t in tests/*.sh; do bash \"$t\" || break; done`. Expected: cli=24, hooks=13, install-script=18, plugin=20, skill-contracts=35, total=110 passed, 0 failed. Confirm assertion counts in CHANGELOG.md::[0.2.2]::Added match the actual numbers.",
+    "(n) CHANGELOG.md::[0.2.2] — verify every claim about what changed maps to a real diff hunk. Especially: the four issue-numbered Fixed entries each cite a regression test name that exists in tests/test-skill-contracts.sh.",
+    "(o) v0.2.1 contract regression check: run `grep -rE '~/gdlc/|BaseInfinity/gdlc([^-]|$)' skills/ CLAUDE_CODE_GDLC_WIZARD.md` and confirm zero matches. v0.2.1 forbidden-pattern tests should still pass."
+  ],
+  "review_instructions": "Be strict. This release fixes two P1 user-state-corruption bugs, so superficial 'looks good' acceptance is the failure mode. Read the actual prose of step-0.5 and step-5.5 in skills/gdlc-setup/SKILL.md — don't just trust the test names. Verify the new contract tests would FAIL against pre-fix code (the TDD RED claim in the preflight). Pay special attention to edge cases not covered by the verification_checklist: corrupt metadata in GDLC.md, project-playbook variants with non-canonical headers, multiple wizard installs over time. Score 1-10 with CERTIFIED only if all 4 issues are demonstrably closed by the code shown.",
+  "preflight_path": ".reviews/preflight-v0.2.2.md",
+  "artifact_path": ".reviews/codex-review-v0.2.2.md"
+}

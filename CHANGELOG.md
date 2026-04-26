@@ -5,6 +5,27 @@ This file tracks the **distribution wizard** (CLI, plugin, hooks, install script
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] — 2026-04-26
+
+**Issue-fix release.** Bundles the four playbook gaps surfaced by the codeguesser case study (issues #1, #3, #4) and the dogfooding finding from the codeguesser dual-install (issue #5).
+
+### Fixed
+- **Issue #1 — `gdlc-setup` test-harness detection false-positives on script names.** Step-1 detection table now scopes `vitest`/`jest`/`mocha`/`playwright` lookups to `package.json` `devDependencies`/`dependencies` blocks (not top-level grep). Added jq-based detection block that parses dependency keys correctly. Regression test: `test_setup_step_1_test_harness_detection_scoped_to_deps`.
+- **Issue #3 — `gdlc-setup` lacked existing-install early-redirect.** Added `step-0.5` that checks for an existing wizard-managed `GDLC.md` (via `<!-- (GDLC )?Wizard Version:` metadata comment) before any auto-scan or file write. Three-branch logic: managed install → STOP and redirect to `/gdlc-update`; legacy unmanaged → STOP and ASK (backup, treat-as-legacy, or abort); empty stub or absent → continue with fresh setup. Prevents the codeguesser-class bug where pre-wizard `GDLC.md` could be silently overwritten. Regression tests: `test_setup_existing_install_early_redirect`, `test_setup_existing_install_redirect_before_writes`.
+- **Issue #4 — case-study template lacked project-playbook auto-linkage.** Added `step-5.5` to `gdlc-setup`: detects root-level `ARTSTYLE.md`, `TESTING.md`, `CLAUDE.md`, `ARCHITECTURE.md`, `SDLC.md`, `BRANDING.md`, `DESIGN_SYSTEM.md`. For each present, appends a bullet to a `## Related playbooks` section in `GDLC.md`. Idempotent (skips if section exists or no playbooks detected). Skipped silently on `skill-only`. Regression tests: `test_setup_links_surrounding_playbooks`, `test_wizard_doc_documents_playbook_linkage`.
+- **Issue #5 — hook filename collision with `claude-sdlc-wizard`.** Renamed `hooks/instructions-loaded-check.sh` → `hooks/gdlc-instructions-loaded-check.sh` (with `git mv` preserving history). Updated `hooks/hooks.json`, `cli/init.js`, `cli/templates/settings.json`, all test files, and skill/architecture docs to reference the namespaced basename. Whichever wizard installed second was previously silently overwriting the other's `instructions-loaded-check.sh` since both wizards target `.claude/hooks/`. Regression tests: `test_no_hook_filename_collisions_with_sdlc`, `test_hooks_json_uses_namespaced_basenames`, `test_cli_settings_template_uses_namespaced_basenames`.
+
+### Changed
+- **Step registry** updated in `CLAUDE_CODE_GDLC_WIZARD.md`: setup gains `step-0.5` (existing-install redirect) and `step-5.5` (playbook linkage). Completed-steps metadata block bumped to reflect the new step IDs.
+
+### Added
+- **13 new contract / CLI regression tests** (whole-suite total 102 → 115):
+  - **10 new contract tests** in `tests/test-skill-contracts.sh` (27 → 37 assertions): per-issue regression coverage for the four fixes above (#1, #3, #4, #5) plus three Codex-round-1 findings — zero-byte `GDLC.md` stub handling (Finding 2), step-5.5 idempotency tolerant header detection (Finding 3), and namespace-collision contracts.
+  - **3 new CLI tests** in `tests/test-cli.sh` (24 → 27 assertions): legacy hook migration regressions — `init --force` removes legacy `instructions-loaded-check.sh`, replaces (not appends) the legacy `InstructionsLoaded` settings entry, and `check` flags legacy disk artifacts as DRIFT (Codex Finding 1, P1).
+
+### Migration notes
+- Existing v0.2.1 consumers can upgrade with `/gdlc-update` or `npx claude-gdlc-wizard init --force`. The hook rename is automatic via the install path; the legacy `instructions-loaded-check.sh` will be removed by `init --force` (drift detection flags it as DRIFT, regardless of `--force` — see `cli/init.js::isLegacyHookEntry` and `LEGACY_HOOK_FILES`). The CLI also strips legacy entries from `.claude/settings.json` `InstructionsLoaded` regardless of `--force`. If users have customized the legacy hook, `/gdlc-update` will surface that as CUSTOMIZED for explicit per-file decision before the CLI rewrites the hook.
+
 ## [0.2.1] — 2026-04-25
 
 **Skill behavioral migration to local-repo paths.** The transitional `~/gdlc/` clone is no longer required. Skills are fully self-contained via the wizard CLI + WebFetch.

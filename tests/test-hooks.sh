@@ -1,6 +1,6 @@
 #!/bin/bash
 # Hook behavior tests — run the real hook scripts and verify output.
-# Covers: gdlc-prompt-check, instructions-loaded-check, _find-gdlc-root.
+# Covers: gdlc-prompt-check, gdlc-instructions-loaded-check, _find-gdlc-root.
 
 set -e
 
@@ -158,17 +158,17 @@ test_prompt_check_always_exits_zero() {
     pass "gdlc-prompt-check always exits 0 (non-blocking)"
 }
 
-# --- instructions-loaded-check ---
+# --- gdlc-instructions-loaded-check ---
 
 test_instructions_loaded_silent_outside_project() {
     local d
     d=$(make_project_without_gdlc)
     local output
-    output=$(cd "$d" && bash "$HOOK_DIR/instructions-loaded-check.sh" 2>&1)
+    output=$(cd "$d" && bash "$HOOK_DIR/gdlc-instructions-loaded-check.sh" 2>&1)
     if [ -z "$output" ]; then
-        pass "instructions-loaded-check is silent when no GDLC project found"
+        pass "gdlc-instructions-loaded-check is silent when no GDLC project found"
     else
-        fail "instructions-loaded-check should stay silent outside GDLC project (got: $output)"
+        fail "gdlc-instructions-loaded-check should stay silent outside GDLC project (got: $output)"
     fi
     rm -rf "$d"
 }
@@ -177,11 +177,11 @@ test_instructions_loaded_silent_when_gdlc_present() {
     local d
     d=$(make_project_with_gdlc)
     local output
-    output=$(cd "$d" && bash "$HOOK_DIR/instructions-loaded-check.sh" 2>&1)
+    output=$(cd "$d" && bash "$HOOK_DIR/gdlc-instructions-loaded-check.sh" 2>&1)
     if [ -z "$output" ]; then
-        pass "instructions-loaded-check is silent when GDLC.md present"
+        pass "gdlc-instructions-loaded-check is silent when GDLC.md present"
     else
-        fail "instructions-loaded-check should stay silent when GDLC.md present (got: $output)"
+        fail "gdlc-instructions-loaded-check should stay silent when GDLC.md present (got: $output)"
     fi
     rm -rf "$d"
 }
@@ -192,15 +192,15 @@ test_instructions_loaded_always_exits_zero() {
         local d
         d=$($scenario)
         local exit_code=0
-        (cd "$d" && bash "$HOOK_DIR/instructions-loaded-check.sh" >/dev/null 2>&1) || exit_code=$?
+        (cd "$d" && bash "$HOOK_DIR/gdlc-instructions-loaded-check.sh" >/dev/null 2>&1) || exit_code=$?
         if [ "$exit_code" -ne 0 ]; then
-            fail "instructions-loaded-check should exit 0 under '$scenario' (got $exit_code)"
+            fail "gdlc-instructions-loaded-check should exit 0 under '$scenario' (got $exit_code)"
             rm -rf "$d"
             return
         fi
         rm -rf "$d"
     done
-    pass "instructions-loaded-check always exits 0 (non-blocking)"
+    pass "gdlc-instructions-loaded-check always exits 0 (non-blocking)"
 }
 
 # --- Workflow YAML sanity ---

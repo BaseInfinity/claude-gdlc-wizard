@@ -183,7 +183,7 @@ test_cli_installs_from_plugin_source() {
             ok=false
         fi
     done
-    for hook in gdlc-prompt-check.sh instructions-loaded-check.sh _find-gdlc-root.sh; do
+    for hook in gdlc-prompt-check.sh gdlc-instructions-loaded-check.sh _find-gdlc-root.sh; do
         local installed="$d/.claude/hooks/$hook"
         local source="$REPO_ROOT/hooks/$hook"
         [ -f "$installed" ] || { ok=false; continue; }
@@ -260,7 +260,7 @@ print(' '.join(sorted(d.get('hooks', {}).keys())))
 test_plugin_hook_scripts_exist() {
     local ok=true
     local missing=""
-    for script in gdlc-prompt-check.sh instructions-loaded-check.sh _find-gdlc-root.sh; do
+    for script in gdlc-prompt-check.sh gdlc-instructions-loaded-check.sh _find-gdlc-root.sh; do
         if [ ! -f "$REPO_ROOT/hooks/$script" ]; then
             ok=false
             missing="$missing $script"
@@ -277,14 +277,14 @@ test_plugin_hook_scripts_executable() {
     local ok=true
     local missing=""
     # _find-gdlc-root.sh is sourced, not executed — no +x required.
-    for script in gdlc-prompt-check.sh instructions-loaded-check.sh; do
+    for script in gdlc-prompt-check.sh gdlc-instructions-loaded-check.sh; do
         if [ ! -x "$REPO_ROOT/hooks/$script" ]; then
             ok=false
             missing="$missing $script"
         fi
     done
     if [ "$ok" = true ]; then
-        pass "Executable hook scripts (gdlc-prompt-check, instructions-loaded) have +x"
+        pass "Executable hook scripts (gdlc-prompt-check, gdlc-instructions-loaded-check) have +x"
     else
         fail "hooks/ non-executable:$missing"
     fi

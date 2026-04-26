@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/instructions-loaded-check.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/gdlc-instructions-loaded-check.sh"
           }
         ]
       }

@@ -1,6 +1,6 @@
 {
   "name": "gdlc-wizard",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "GDLC enforcement for AI agents — persona-driven playtest cycles, triangulated findings, ratchet-only-tightens. Sibling to claude-sdlc-wizard.",
   "author": {
     "name": "Stefan Ayala",

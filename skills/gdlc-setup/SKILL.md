@@ -62,14 +62,36 @@ https://raw.githubusercontent.com/BaseInfinity/claude-gdlc-wizard/main/CHANGELOG
 
 Parse the topmost `## [X.Y.Z]` — that's the current wizard version.
 
+### step-0.5 — Existing-Install Early-Redirect
+
+**Before any auto-scan or file write**, check whether this project already has a wizard-managed `GDLC.md`. If so, this is an **update** scenario, not a setup — stop and redirect to `/gdlc-update`.
+
+```bash
+if [ -f GDLC.md ] && grep -qE '^<!-- (GDLC )?Wizard Version:' GDLC.md; then
+  echo "Existing wizard install detected. Run /gdlc-update instead — /gdlc-setup would clobber the case-study body."
+  exit 1
+fi
+```
+
+Three branches:
+
+| State | Detection | Action |
+|-------|-----------|--------|
+| Wizard-managed install | `GDLC.md` exists AND has `<!-- (GDLC )?Wizard Version: ` metadata comment | **STOP.** Tell the user to run `/gdlc-update` and exit before step-1. Setup would overwrite the existing case-study body — never destructive without explicit user confirmation |
+| Empty stub | `GDLC.md` exists but is zero-byte (just-installed, pre-setup state) | Continue — this is the expected new-install handoff from `npx claude-gdlc-wizard init` |
+| Legacy / unmanaged | `GDLC.md` exists but has no wizard-version metadata | **STOP and ASK.** Show the user the file's first 10 lines, ask whether to (a) treat as legacy and run `/gdlc-update`, (b) move to `GDLC.md.bak` and proceed with fresh setup, or (c) abort. Never overwrite without explicit choice |
+| No GDLC.md | File absent | Continue — fresh install path |
+
+This covers Setup Rule 5 ("detect existing install, redirect to update") and prevents the codeguesser-class bug where a pre-wizard `GDLC.md` could be silently overwritten when `/gdlc-setup` ran on an already-populated project.
+
 ### step-1 — Auto-Scan Consumer Project
 
 Scan the current working directory for GDLC-relevant signals. Every signal maps to one or more of the three surface classes (gameplay / art / pipeline).
 
 | Scan target | Detection | Maps to |
 |-------------|-----------|---------|
-| `package.json` with `"vitest"` or `"jest"` or `"mocha"` dep | Test harness | All surfaces |
-| `package.json` with `"playwright"` or `"@playwright/test"` | e2e harness | gameplay-matrix |
+| `package.json` `devDependencies`/`dependencies` includes `vitest`, `jest`, or `mocha` | Test harness | All surfaces |
+| `package.json` `devDependencies`/`dependencies` includes `playwright` or `@playwright/test` | e2e harness | gameplay-matrix |
 | `__screenshots__/` dir or `*.png` baseline files in tests/ | Visual-regression | art-craft-review |
 | `src/*.js` with `new AudioContext` or `canvas.getContext` | Browser game surface | gameplay-matrix, art-craft-review |
 | `snippets/`, `levels/`, `content/`, `sprites/`, `audio/` dirs | Content pool | pipeline-contract-audit (audit-map likely) |
@@ -78,7 +100,14 @@ Scan the current working directory for GDLC-relevant signals. Every signal maps 
 | `.claude/skills/sdlc-wizard/` or `.claude/skills/setup/` | SDLC wizard installed | compatible peer; note it |
 | `CLAUDE.md` present | Project has AI instructions | note it; do not overwrite |
 
-Do the scan with `ls`, `Glob`, and `Grep` — no destructive operations.
+For `package.json` dep checks, **parse the JSON with `jq`** rather than top-level grep — script entries like `"test:watch": "vitest"` will false-positive on a regex such as `grep -E '"(vitest|jest|mocha)"'`. Use:
+
+```bash
+jq -r '.devDependencies // {}, .dependencies // {} | keys[]' package.json | \
+  grep -E '^(vitest|jest|mocha|playwright|@playwright/test)$' || true
+```
+
+Other scans use `ls`, `Glob`, and `Grep` — no destructive operations.
 
 ### step-2 — Confidence Map
 
@@ -147,9 +176,25 @@ Append `.gdlc/feedback-drafts/` to the project `.gitignore` if the pattern is no
 
 **Part B — Case-study stub:**
 
-Skip if argument is `skill-only`, or if `GDLC.md` at project root already exists (do NOT overwrite — legacy case studies are sacred; offer to add metadata comments only if missing).
+Skip if argument is `skill-only`. Otherwise, decide based on the current state of `GDLC.md` at the project root:
 
-Otherwise, write `GDLC.md` at the project root from the template in `CLAUDE_CODE_GDLC_WIZARD.md` (Case-Study GDLC.md template section). Replace placeholders:
+| State | Detection | Action |
+|-------|-----------|--------|
+| Absent | `GDLC.md` does not exist | Write the case-study stub from the template (fresh-install path). |
+| Empty stub | `GDLC.md` exists AND is zero-byte | **Write the case-study stub from the template** — this is the expected `npx claude-gdlc-wizard init` handoff (consistent with step-0.5's `Empty stub → Continue` branch). Do NOT skip; the empty file was created by the CLI specifically so this step would populate it. |
+| Non-empty file | `GDLC.md` exists AND is ≥ 1 byte | **Skip writing.** Do NOT overwrite — legacy case studies are sacred; offer to add metadata comments only if missing. |
+
+Detection in bash:
+```bash
+if [ ! -f GDLC.md ] || [ ! -s GDLC.md ]; then
+  # absent OR zero-byte — safe to write the stub
+  write_case_study_stub
+fi
+```
+
+(`test -s FILE` is true only if the file exists AND is non-empty; the negation covers both absent and empty-stub cases.)
+
+When writing, render `GDLC.md` at the project root from the template in `CLAUDE_CODE_GDLC_WIZARD.md` (Case-Study GDLC.md template section). Replace placeholders:
 
 - `<PROJECT_NAME>` — user's answer from step-3.
 - `<VERSION_FROM_CHANGELOG>` — topmost version from the CHANGELOG fetched in step-0.2.
@@ -157,6 +202,45 @@ Otherwise, write `GDLC.md` at the project root from the template in `CLAUDE_CODE
 - `<YYYY-MM-DD>` — today's date.
 - `<DETECTED_OR_USER_CONFIRMED_SURFACES>` — from step-3. Comma-separated list.
 - `<DETECTED_HARNESS_OR_...>` — from step-1 detections.
+
+### step-5.5 — Link Surrounding Playbooks
+
+After scaffolding the case-study body, detect project-local playbooks at the repo root and append a `## Related playbooks` section to `GDLC.md`. This gives readers a breadcrumb from the case study to the project's TDD philosophy, visual-style rules, and AI instructions.
+
+**Detection set** (root only — do not recurse):
+
+| Filename | Linked-as | Notes |
+|----------|-----------|-------|
+| `ARTSTYLE.md` | Visual-style playbook | Color, typography, motion, asset-quality rules |
+| `TESTING.md` | Testing strategy | Diamond/pyramid, fixtures, mocking philosophy, suite index |
+| `CLAUDE.md` | AI instructions | Project-specific Claude Code guidance, commands, conventions |
+| `ARCHITECTURE.md` | System architecture | Component boundaries, deployment topology |
+| `SDLC.md` | SDLC discipline | Hooks, enforcement, version tracking |
+| `BRANDING.md` | Brand voice + naming | Tone, terminology, content style |
+| `DESIGN_SYSTEM.md` | Design tokens | Colors, fonts, spacing, component patterns |
+
+For each that exists, append a bullet of the form:
+```markdown
+- [<Title>](<filename>) — <one-line purpose>
+```
+
+**Append rules:**
+- If a `## Related playbooks` header already exists in `GDLC.md`, leave the section alone (idempotent — `/gdlc-update` re-runs safely). The detection MUST be **case-insensitive and whitespace-tolerant** so that hand-edited variants (`## related playbooks`, `##  Related Playbooks`, trailing spaces) are recognised — otherwise the skill duplicates the section every run.
+
+  Use this regex:
+  ```bash
+  if grep -qE '^##[[:space:]]+[Rr]elated[[:space:]]+[Pp]laybooks[[:space:]]*$' GDLC.md; then
+    # already linked — skip
+    exit 0
+  fi
+  ```
+
+  (Case-insensitive on `R` and `P`, one-or-more spaces between tokens, optional trailing whitespace, anchored to start and end of line — covers every reasonable hand-typed variation while rejecting accidental matches inside prose.)
+- If no playbooks are detected, skip the section entirely (don't add an empty header).
+- Section goes at the bottom of the case-study body, before any closing footer.
+- Skip silently on `skill-only` (no case-study body to append to).
+
+This is purely additive — never modifies existing `GDLC.md` content, only appends a section if absent.
 
 ### step-6 — Write Metadata
 
@@ -167,7 +251,7 @@ The metadata comments from the template are already filled. Verify the full five
 <!-- GDLC Sibling SHA: <SHORT_SHA> -->
 <!-- GDLC Setup Date: <YYYY-MM-DD> -->
 <!-- GDLC Last Update: <YYYY-MM-DD> -->
-<!-- Completed Steps: step-0.1, step-0.2, step-1, step-2, step-3, step-4, step-5, step-6, step-7 -->
+<!-- Completed Steps: step-0.1, step-0.2, step-0.5, step-1, step-2, step-3, step-4, step-5, step-5.5, step-6, step-7 -->
 ```
 
 On initial install `GDLC Last Update` equals `GDLC Setup Date`. `/gdlc-update` bumps `Last Update` on every subsequent update while preserving `Setup Date`. The `Sibling SHA` field name is preserved for backward compatibility — its value is now the source ID (npm version, optionally suffixed with git SHA) rather than a sibling-repo SHA, but the label is stable.

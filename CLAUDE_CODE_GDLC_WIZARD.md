@@ -58,7 +58,7 @@ The consumer project's case-study `GDLC.md` tracks install state via metadata co
 <!-- GDLC Sibling SHA: <SHORT_SHA> -->
 <!-- GDLC Setup Date: <YYYY-MM-DD> -->
 <!-- GDLC Last Update: <YYYY-MM-DD> -->
-<!-- Completed Steps: step-0.1, step-0.2, step-1, step-2, step-3, step-4, step-5, step-6, step-7 -->
+<!-- Completed Steps: step-0.1, step-0.2, step-0.5, step-1, step-2, step-3, step-4, step-5, step-5.5, step-6, step-7 -->
 ```
 
 - **Version** — the wizard semver at the time of install/update. Compared against the CHANGELOG's topmost version to decide whether an update is needed.
@@ -87,11 +87,13 @@ The `/gdlc-setup` skill runs these steps in order. Completed step IDs are tracke
 |----|------|--------------|------------|
 | step-0.1 | Read wizard doc | Load `CLAUDE_CODE_GDLC_WIZARD.md` from project root (mandatory first action) | No |
 | step-0.2 | Verify wizard install | Run `npx claude-gdlc-wizard check` — full-surface verification (settings + 3 hooks + 4 skills + wizard doc + .gitignore) | No |
+| step-0.5 | Existing-install early-redirect | If `GDLC.md` exists with `<!-- (GDLC )?Wizard Version:` metadata → STOP, redirect to `/gdlc-update` (would clobber case-study body). If `GDLC.md` exists without metadata → STOP and ASK whether to backup-and-fresh, treat as legacy, or abort | Yes (only if unmanaged GDLC.md) |
 | step-1 | Auto-scan consumer project | Detect: test harness (vitest/jest), e2e (playwright), visual-regression harness, Canvas/Audio APIs, existing `GDLC.md`, `.claude/` directory | No |
 | step-2 | Confidence map | Classify each data point: RESOLVED-detected / RESOLVED-inferred / UNRESOLVED | No |
 | step-3 | Present findings + ask unresolved | Show detected values for bulk confirmation; ask only what couldn't be inferred | Yes (only unresolved) |
 | step-4 | Verify skill suite | Run `npx claude-gdlc-wizard check` — every managed file should report MATCH | No |
 | step-5 | Scaffold case-study stub + `.gdlc/` | Generate `GDLC.md` from the template below; create `.gdlc/feedback-log.md` header row; append `.gdlc/feedback-drafts/` to `.gitignore` | No (unless stub already exists) |
+| step-5.5 | Link surrounding playbooks | Detect root-level `ARTSTYLE.md`, `TESTING.md`, `CLAUDE.md`, `ARCHITECTURE.md`, `SDLC.md`, `BRANDING.md`, `DESIGN_SYSTEM.md`. For each present, append a bullet to a `## Related playbooks` section in `GDLC.md`. Idempotent (skips if section exists; skips entirely if no playbooks detected) | No |
 | step-6 | Write metadata | Insert version, source ID, setup date, completed steps into the case-study header | No |
 | step-7 | Verify | All four skills MATCH via `npx claude-gdlc-wizard check`; `.gdlc/feedback-log.md` present; case-study valid; all four skills discoverable | No |
 
@@ -170,7 +172,7 @@ When `/gdlc-setup` scaffolds a new case-study stub, it writes this file at the c
 <!-- GDLC Sibling SHA: <SHORT_SHA> -->
 <!-- GDLC Setup Date: <YYYY-MM-DD> -->
 <!-- GDLC Last Update: <YYYY-MM-DD> -->
-<!-- Completed Steps: step-0.1, step-0.2, step-1, step-2, step-3, step-4, step-5, step-6, step-7 -->
+<!-- Completed Steps: step-0.1, step-0.2, step-0.5, step-1, step-2, step-3, step-4, step-5, step-5.5, step-6, step-7 -->
 
 ## Project Surfaces
 

@@ -15,7 +15,7 @@ This is a **meta-repository**. It contains the distribution machinery for the GD
 - `FEEDBACK_SKILL_SPEC.md` — design spec for the feedback skill.
 - `PLAYBOOK_CHANGELOG.md` — framework changelog (rule-version history, playtest cycles, skill bumps). Distinct from `CHANGELOG.md` which tracks the distribution wizard.
 - `skills/{gdlc,gdlc-setup,gdlc-update,gdlc-feedback}/SKILL.md` — the 4 skills consumers install.
-- `hooks/{gdlc-prompt-check.sh, instructions-loaded-check.sh, _find-gdlc-root.sh}` — 2 enforcement hooks + 1 sourced helper.
+- `hooks/{gdlc-prompt-check.sh, gdlc-instructions-loaded-check.sh, _find-gdlc-root.sh}` — 2 enforcement hooks + 1 sourced helper.
 - `hooks/hooks.json` — plugin-format registration (`${CLAUDE_PLUGIN_ROOT}`).
 - `cli/bin/gdlc-wizard.js` + `cli/init.js` + `cli/templates/settings.json` — Node CLI (`npx claude-gdlc-wizard init`).
 - `install.sh` — `curl | bash` bootstrap pointed at `npx claude-gdlc-wizard`.

@@ -21,7 +21,7 @@ const FILES = [
   { src: 'settings.json', dest: '.claude/settings.json', base: TEMPLATES_DIR },
   { src: 'hooks/_find-gdlc-root.sh', dest: '.claude/hooks/_find-gdlc-root.sh', base: REPO_ROOT },
   { src: 'hooks/gdlc-prompt-check.sh', dest: '.claude/hooks/gdlc-prompt-check.sh', executable: true, base: REPO_ROOT },
-  { src: 'hooks/instructions-loaded-check.sh', dest: '.claude/hooks/instructions-loaded-check.sh', executable: true, base: REPO_ROOT },
+  { src: 'hooks/gdlc-instructions-loaded-check.sh', dest: '.claude/hooks/gdlc-instructions-loaded-check.sh', executable: true, base: REPO_ROOT },
   { src: 'skills/gdlc/SKILL.md', dest: '.claude/skills/gdlc/SKILL.md', base: REPO_ROOT },
   { src: 'skills/gdlc-setup/SKILL.md', dest: '.claude/skills/gdlc-setup/SKILL.md', base: REPO_ROOT },
   { src: 'skills/gdlc-update/SKILL.md', dest: '.claude/skills/gdlc-update/SKILL.md', base: REPO_ROOT },
@@ -34,12 +34,28 @@ const WIZARD_HOOK_MARKERS = FILES
   .filter((f) => f.executable && f.dest.startsWith('.claude/hooks/'))
   .map((f) => path.basename(f.src));
 
+// Pre-rename hook artifacts shipped by older wizard versions. These are
+// unambiguously wizard-owned: settings entries get replaced (not appended-
+// alongside), disk files get removed, `check` flags any leftover as DRIFT.
+const LEGACY_HOOK_FILES = [
+  { dest: '.claude/hooks/instructions-loaded-check.sh', basename: 'instructions-loaded-check.sh' },
+];
+
+const LEGACY_HOOK_MARKERS = LEGACY_HOOK_FILES.map((f) => f.basename);
+
 const GITIGNORE_ENTRIES = ['.claude/plans/', '.claude/settings.local.json'];
 
 function isWizardHookEntry(hookEntry) {
   if (!hookEntry || !hookEntry.hooks) return false;
   return hookEntry.hooks.some((h) =>
     WIZARD_HOOK_MARKERS.some((marker) => h.command && h.command.includes(marker))
+  );
+}
+
+function isLegacyHookEntry(hookEntry) {
+  if (!hookEntry || !hookEntry.hooks) return false;
+  return hookEntry.hooks.some((h) =>
+    LEGACY_HOOK_MARKERS.some((marker) => h.command && h.command.includes(marker))
   );
 }
 
@@ -58,6 +74,15 @@ function mergeSettings(existingPath, templatePath, force) {
 
       // Each template event has exactly one wizard hook entry.
       const templateEntry = templateEntries[0];
+
+      // Drop legacy wizard entries first (unambiguously wizard-owned, regardless of force).
+      // Walk back-to-front so splice indices stay valid.
+      for (let i = existing.hooks[event].length - 1; i >= 0; i--) {
+        if (isLegacyHookEntry(existing.hooks[event][i])) {
+          existing.hooks[event].splice(i, 1);
+        }
+      }
+
       const existingIdx = existing.hooks[event].findIndex(isWizardHookEntry);
 
       if (existingIdx === -1) {
@@ -118,6 +143,22 @@ function planOperations(targetDir, { force }) {
     executable: false,
   });
 
+  // Schedule removal of any pre-rename hook files left over from older wizard
+  // versions. Always remove (not gated on --force) since these are wizard-owned
+  // artifacts, not user files.
+  for (const legacy of LEGACY_HOOK_FILES) {
+    const legacyPath = path.join(targetDir, legacy.dest);
+    if (fs.existsSync(legacyPath)) {
+      ops.push({
+        src: null,
+        dest: legacyPath,
+        relativeDest: legacy.dest,
+        action: 'REMOVE_LEGACY',
+        executable: false,
+      });
+    }
+  }
+
   return ops;
 }
 
@@ -128,6 +169,10 @@ function ensureDir(filePath) {
 function executeOperations(ops) {
   for (const op of ops) {
     if (op.action === 'SKIP') continue;
+    if (op.action === 'REMOVE_LEGACY') {
+      fs.unlinkSync(op.dest);
+      continue;
+    }
     ensureDir(op.dest);
     if (op.action === 'MERGE') {
       fs.writeFileSync(op.dest, op.mergedContent);
@@ -164,6 +209,7 @@ function printOps(ops) {
     const color = op.action === 'CREATE' ? GREEN
       : op.action === 'SKIP' ? YELLOW
       : op.action === 'MERGE' ? MAGENTA
+      : op.action === 'REMOVE_LEGACY' ? RED
       : CYAN;
     console.log(`  ${color}${op.action}${RESET}  ${op.relativeDest}`);
   }
@@ -266,6 +312,18 @@ function check(targetDir, { json = false } = {}) {
 
   const wizardDest = path.join(targetDir, 'CLAUDE_CODE_GDLC_WIZARD.md');
   results.push(checkFile(WIZARD_DOC, wizardDest, 'CLAUDE_CODE_GDLC_WIZARD.md', false));
+
+  // Flag any pre-rename hook artifacts so users know to re-run init.
+  for (const legacy of LEGACY_HOOK_FILES) {
+    const legacyPath = path.join(targetDir, legacy.dest);
+    if (fs.existsSync(legacyPath)) {
+      results.push({
+        file: legacy.dest,
+        status: 'DRIFT',
+        details: 'Legacy wizard hook from a prior version — run `init` (or `init --force`) to remove',
+      });
+    }
+  }
 
   const gitignorePath = path.join(targetDir, '.gitignore');
   results.push(checkGitignore(gitignorePath));

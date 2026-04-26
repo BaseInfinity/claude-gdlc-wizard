@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared helper: walk up from CWD to find nearest GDLC.md.
-# Sourced by gdlc-prompt-check.sh and instructions-loaded-check.sh.
+# Sourced by gdlc-prompt-check.sh and gdlc-instructions-loaded-check.sh.
 # Lets a hook fire from a subdir inside a GDLC project (monorepo support).
 
 # find_gdlc_root — walks up from pwd, stops at $HOME (exclusive) or /.

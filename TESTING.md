@@ -81,7 +81,7 @@ Invokes the three shipped hook scripts with constructed fixtures. Covers:
 - `gdlc-prompt-check.sh` emits `SETUP NOT COMPLETE` when `GDLC.md` is empty (pointing to `/gdlc-setup`)
 - Silent outside a GDLC-managed project (exit 0, no output)
 - Always exit 0 (never blocks the user's prompt)
-- `instructions-loaded-check.sh` stays silent on a valid state
+- `gdlc-instructions-loaded-check.sh` stays silent on a valid state
 - CI YAML sanity check (basic parseability)
 
 ### tests/test-install-script.sh (18 assertions — structural + gated-live)

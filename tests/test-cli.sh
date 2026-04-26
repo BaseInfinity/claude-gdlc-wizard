@@ -105,7 +105,7 @@ test_creates_all_files() {
     [ -f "$d/.claude/settings.json" ] && count=$((count + 1))
     [ -f "$d/.claude/hooks/_find-gdlc-root.sh" ] && count=$((count + 1))
     [ -f "$d/.claude/hooks/gdlc-prompt-check.sh" ] && count=$((count + 1))
-    [ -f "$d/.claude/hooks/instructions-loaded-check.sh" ] && count=$((count + 1))
+    [ -f "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc/SKILL.md" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc-setup/SKILL.md" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc-update/SKILL.md" ] && count=$((count + 1))
@@ -125,11 +125,11 @@ test_hooks_executable() {
     (cd "$d" && node "$CLI" init >/dev/null 2>&1)
     local ok=true
     [ -x "$d/.claude/hooks/gdlc-prompt-check.sh" ] || ok=false
-    [ -x "$d/.claude/hooks/instructions-loaded-check.sh" ] || ok=false
+    [ -x "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" ] || ok=false
     if [ "$ok" = true ]; then
         pass "init sets the 2 gdlc hook scripts executable"
     else
-        fail "init should chmod +x gdlc-prompt-check.sh and instructions-loaded-check.sh"
+        fail "init should chmod +x gdlc-prompt-check.sh and gdlc-instructions-loaded-check.sh"
     fi
     rm -rf "$d"
 }
@@ -172,7 +172,7 @@ test_hook_content_is_gdlc_specific() {
     local ok=true
     grep -q "GDLC BASELINE" "$d/.claude/hooks/gdlc-prompt-check.sh" || ok=false
     grep -q "gdlc-setup" "$d/.claude/hooks/gdlc-prompt-check.sh" || ok=false
-    grep -q "GDLC wizard file" "$d/.claude/hooks/instructions-loaded-check.sh" || ok=false
+    grep -q "GDLC wizard file" "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" || ok=false
     # Regression: no leftover SDLC markers
     if grep -q "SDLC BASELINE\|setup-wizard\|SDLC.md" "$d/.claude/hooks/gdlc-prompt-check.sh"; then
         ok=false
@@ -390,7 +390,7 @@ test_check_json_is_valid() {
 # package.json `files` array MUST include "hooks/" — without it, the npm
 # tarball ships without the hook scripts, and cli/init.js's FILES array
 # (which references hooks/_find-gdlc-root.sh, hooks/gdlc-prompt-check.sh,
-# hooks/instructions-loaded-check.sh) breaks 100% of npx installs.
+# hooks/gdlc-instructions-loaded-check.sh) breaks 100% of npx installs.
 test_package_files_includes_hooks() {
     local pkg="$REPO_ROOT/package.json"
     if jq -e '.files | index("hooks/")' "$pkg" > /dev/null 2>&1; then
@@ -424,6 +424,124 @@ test_hook_shebang_bytes_clean() {
     fi
 }
 
+# --- Legacy hook migration regression (v0.2.1 → v0.2.2 namespace rename) ---
+#
+# Seeds a v0.2.1-style state (legacy `instructions-loaded-check.sh` hook file
+# on disk + matching settings.json entry referencing the legacy basename),
+# then runs `init` and verifies:
+#   - the legacy file is gone,
+#   - the namespaced `gdlc-instructions-loaded-check.sh` is installed,
+#   - settings.json has exactly one InstructionsLoaded entry pointing at the
+#     namespaced basename (not appended alongside the legacy entry).
+
+seed_v021_legacy_state() {
+    local d="$1"
+    mkdir -p "$d/.claude/hooks"
+    # Legacy hook file with realistic-ish content
+    cat > "$d/.claude/hooks/instructions-loaded-check.sh" <<'LEGACY'
+#!/usr/bin/env bash
+# v0.2.1 legacy hook — pre-rename basename
+echo '{"systemMessage": "[GDLC SETUP]"}'
+LEGACY
+    chmod +x "$d/.claude/hooks/instructions-loaded-check.sh"
+    # settings.json with the legacy hook entry
+    cat > "$d/.claude/settings.json" <<'SETTINGS'
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gdlc-prompt-check.sh" }
+        ]
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/instructions-loaded-check.sh" }
+        ]
+      }
+    ]
+  }
+}
+SETTINGS
+}
+
+test_init_removes_legacy_hook_file() {
+    local d
+    d=$(make_temp)
+    seed_v021_legacy_state "$d"
+    (cd "$d" && node "$CLI" init --force >/dev/null 2>&1)
+    local ok=true
+    [ ! -f "$d/.claude/hooks/instructions-loaded-check.sh" ] || ok=false
+    [ -f "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" ] || ok=false
+    if [ "$ok" = true ]; then
+        pass "init --force removes legacy instructions-loaded-check.sh and installs namespaced replacement"
+    else
+        fail "init --force should remove .claude/hooks/instructions-loaded-check.sh AND install gdlc-instructions-loaded-check.sh"
+    fi
+    rm -rf "$d"
+}
+
+test_init_replaces_legacy_settings_entry() {
+    local d
+    d=$(make_temp)
+    seed_v021_legacy_state "$d"
+    (cd "$d" && node "$CLI" init --force >/dev/null 2>&1)
+    # After migration, InstructionsLoaded should have exactly ONE entry, and it
+    # should reference the namespaced basename, not the legacy basename.
+    local entry_count
+    entry_count=$(python3 -c "
+import json
+with open('$d/.claude/settings.json') as f:
+    d = json.load(f)
+entries = d['hooks'].get('InstructionsLoaded', [])
+print(len(entries))
+" 2>/dev/null)
+    local has_namespaced
+    has_namespaced=$(python3 -c "
+import json
+with open('$d/.claude/settings.json') as f:
+    d = json.load(f)
+entries = d['hooks'].get('InstructionsLoaded', [])
+flat = [h.get('command','') for e in entries for h in e.get('hooks', [])]
+namespaced = any('gdlc-instructions-loaded-check.sh' in c for c in flat)
+legacy = any(c.endswith('instructions-loaded-check.sh') and 'gdlc-' not in c.split('/')[-1] for c in flat)
+print('1' if (namespaced and not legacy) else '0')
+" 2>/dev/null)
+    if [ "$entry_count" = "1" ] && [ "$has_namespaced" = "1" ]; then
+        pass "init --force replaces legacy InstructionsLoaded entry (1 entry, namespaced only)"
+    else
+        fail "init --force should leave a single InstructionsLoaded entry referencing gdlc-instructions-loaded-check.sh (entries=$entry_count, namespaced-only=$has_namespaced)"
+    fi
+    rm -rf "$d"
+}
+
+test_check_flags_legacy_hook_drift() {
+    local d
+    d=$(make_temp)
+    (cd "$d" && node "$CLI" init >/dev/null 2>&1)
+    # Drop the legacy artifact onto a clean v0.2.2 install so check sees BOTH
+    # current files AND the legacy leftover.
+    cat > "$d/.claude/hooks/instructions-loaded-check.sh" <<'LEGACY'
+#!/usr/bin/env bash
+echo legacy
+LEGACY
+    chmod +x "$d/.claude/hooks/instructions-loaded-check.sh"
+    local output
+    output=$(cd "$d" && node "$CLI" check 2>&1) || true
+    local exit_code=0
+    (cd "$d" && node "$CLI" check >/dev/null 2>&1) || exit_code=$?
+    if echo "$output" | grep -q "DRIFT" && \
+       echo "$output" | grep -q "instructions-loaded-check.sh" && \
+       [ "$exit_code" -eq 1 ]; then
+        pass "check flags legacy instructions-loaded-check.sh as DRIFT and exits 1"
+    else
+        fail "check should report DRIFT on legacy hook leftover and exit 1 (exit=$exit_code)"
+    fi
+    rm -rf "$d"
+}
+
 # --- Run ---
 
 test_help
@@ -450,6 +568,9 @@ test_check_missing_reports
 test_check_json_is_valid
 test_package_files_includes_hooks
 test_hook_shebang_bytes_clean
+test_init_removes_legacy_hook_file
+test_init_replaces_legacy_settings_entry
+test_check_flags_legacy_hook_drift
 
 echo ""
 echo "=== Results ==="

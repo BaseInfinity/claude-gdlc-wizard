@@ -56,7 +56,7 @@ claude-gdlc-wizard/
 ├── hooks/
 │   ├── _find-gdlc-root.sh     — sourced helper: walks up CWD to find GDLC.md
 │   ├── gdlc-prompt-check.sh   — UserPromptSubmit: GDLC BASELINE / SETUP NOT COMPLETE
-│   ├── instructions-loaded-check.sh  — InstructionsLoaded: missing-GDLC.md warning + dual-install nudge
+│   ├── gdlc-instructions-loaded-check.sh  — InstructionsLoaded: missing-GDLC.md warning + dual-install nudge
 │   └── hooks.json             — plugin-mode hook registration (${CLAUDE_PLUGIN_ROOT})
 ├── skills/
 │   ├── gdlc/SKILL.md              — cycle picker, triangulation, P0-to-TDD promotion
@@ -91,7 +91,7 @@ Four markdown files with YAML frontmatter. Consumers invoke them as `/gdlc`, `/g
 Three files. Only 2 are executable:
 
 - **`gdlc-prompt-check.sh`** fires on `UserPromptSubmit`. Reads project root via `_find-gdlc-root.sh`, inspects `GDLC.md`, and emits one of: `GDLC BASELINE:` (case-study loaded, cycle reminder), `SETUP NOT COMPLETE:` (GDLC.md empty — directs to `/gdlc-setup`), or silent (not in a GDLC project). **Always exits 0.** Blocking the user's prompt is not an option.
-- **`instructions-loaded-check.sh`** fires on `InstructionsLoaded`. Validates session-start state; surfaces dual-install guidance if `claude-sdlc-wizard` is detected alongside.
+- **`gdlc-instructions-loaded-check.sh`** fires on `InstructionsLoaded`. Validates session-start state; surfaces dual-install guidance if `claude-sdlc-wizard` is detected alongside.
 - **`_find-gdlc-root.sh`** is sourced, not executed. It walks up from CWD until it finds a `GDLC.md`, sets `GDLC_ROOT`, or returns non-zero if no project root is found.
 
 Shipped by the plugin via `hooks/hooks.json` (using `${CLAUDE_PLUGIN_ROOT}`) and by the CLI via `cli/templates/settings.json` (using `$CLAUDE_PROJECT_DIR`). Both declare the **same 2 events** — `UserPromptSubmit` and `InstructionsLoaded`. Event parity is enforced by `tests/test-plugin.sh`; drift between them means plugin users and CLI users would see different behavior.
