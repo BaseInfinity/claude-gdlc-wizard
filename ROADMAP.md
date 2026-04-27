@@ -97,6 +97,10 @@ Each is a separate small repo. Don't bundle.
 - **Do not add a `.gdlc/` scaffold to `~/xdlc/`** — xdlc is a registry, not a GDLC consumer.
 - ~~**Do not start Phase 2 or 3 work until at least one additional case study (PDLC) ships an earned rule that wasn't in codeguesser's ratchet.**~~ **GATE MET 2026-04-26** — PDLC's earned rule #35 (LLM-architecture vocabulary scrub) verified absent from codeguesser's ratchet. Phase 2 + 3 unblocked. Independent prioritization rule still applies: pick whichever has the lowest blast radius first, do not bundle.
 
+## Next pickup checkpoint
+
+If no Phase 2 or 3 movement by **2026-05-04** (1 week post-graduation), revisit blast-radius rankings and start the lowest-cost item. Default first move: `homebrew-gdlc-wizard` (Phase 3.1) — single Formula file, mirrors `homebrew-sdlc-wizard`, no new packaging surface. Don't let the unblock signal go stale.
+
 ## When you pick this up (Phase 2 or 3)
 
 1. Read this entire file.
