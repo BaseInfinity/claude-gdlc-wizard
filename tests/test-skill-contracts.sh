@@ -211,7 +211,7 @@ test_feedback_uses_stock_labels_only() {
     local ok=true
     local problems=""
     # Must mention stock labels
-    grep -q '\`bug\`' "$f" && grep -q '\`enhancement\`' "$f" && grep -q '\`question\`' "$f" || {
+    grep -q '`bug`' "$f" && grep -q '`enhancement`' "$f" && grep -q '`question`' "$f" || {
         ok=false; problems="$problems stock-labels-not-declared"
     }
     # Must NOT reference legacy custom labels
