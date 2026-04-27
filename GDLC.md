@@ -240,7 +240,7 @@ Two distinct milestones, historically conflated:
 
 ### Distribution-readiness (achieved 2026-04-19)
 
-The `gdlc-setup` + `gdlc-update` skill pair exists at `~/gdlc/.claude/skills/`. Any consumer project (PDLC, or a future case study) can run `/gdlc-setup` to install the skill via file-copy from the sibling repo, and `/gdlc-update` to pull later changes. This is an **ergonomics gate** — it removes the friction of manual copy-paste, so the second case study has a clean adoption path.
+The `gdlc-setup` + `gdlc-update` skill pair ships via `npx claude-gdlc-wizard init` (Path A consolidation, v0.2.0+). Any consumer project (PDLC, or a future case study) can run the CLI to install the skill suite into `.claude/skills/`, then `/gdlc-setup` to scaffold a case-study `GDLC.md`, and `/gdlc-update` later to pull playbook changes via WebFetch + drift detection. This is an **ergonomics gate** — it removes the friction of manual copy-paste, so case studies have a clean adoption path.
 
 Distribution-readiness is **not** a quality signal about the playbook. It says "the install path works", not "the playbook is generalizable". A playbook can be distributable and still be wrong.
 
@@ -260,5 +260,5 @@ Until graduation, this doc is a playbook, the `/gdlc` skill is its enforceable f
 
 - Case study #1 (proving ground): `codeguesser/GDLC.md` — 18 playtests, 384 regression tests, 32+ project-earned rules (v0.11 ship + Playtest #18 integrated 2026-04-18).
 - Case study #2 (queued): a second project (PDLC — pygame/AI lifecycle) will run `/gdlc-setup` to install the skill and run its first playtest under the GDLC playbook. Framework-graduation signal requires case #2 to produce at least one earned rule that wasn't in case #1's ratchet.
-- Install: `/gdlc-setup` (first install in a consumer project), `/gdlc-update` (pull skill + new playbook rules from `~/gdlc/`).
+- Install: `npx claude-gdlc-wizard init` then `/gdlc-setup` (first install in a consumer project), `/gdlc-update` (pull skill + new playbook rules from upstream `BaseInfinity/claude-gdlc-wizard`).
 - SDLC sibling: `sdlc-wizard` plugin.

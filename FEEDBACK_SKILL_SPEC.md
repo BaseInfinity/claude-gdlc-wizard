@@ -163,7 +163,7 @@ Playtests:    <N> completed
 
 ## Anti-goals (things this skill MUST NOT do)
 
-1. **No auto-graduation.** The skill files issues; it never edits the upstream `~/gdlc/GDLC.md` playbook. Graduation is the upstream author's call.
+1. **No auto-graduation.** The skill files issues; it never edits the upstream `GDLC.md` playbook. Graduation is the upstream author's call.
 2. **No cross-project feedback aggregation.** Each consumer files its own issues. No telemetry, no central rollup.
 3. **No silent filing.** Every issue goes through preview + per-field privacy confirm + overall confirm. `dry-run` is the only non-filing mode; there is no `--yes` fast-path.
 4. **No credential handling.** Delegate all auth to `gh` CLI. The skill never reads, stores, or transmits tokens.
