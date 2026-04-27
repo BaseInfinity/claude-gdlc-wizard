@@ -2,6 +2,34 @@
 
 All notable changes to the GDLC playbook and skill are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/) and versioning is [semver](https://semver.org/) where the minor bumps track earned-rule additions and the patch bumps track skill/distribution fixes.
 
+## [0.5.0] - 2026-04-26 — FRAMEWORK GRADUATION
+
+### Added
+- **Rule #35** — *AI-character output must scrub LLM-architecture vocabulary at the response boundary.* (GDLC.md, new section "On AI-character voice integrity"). First earned rule from case study #2 absent from case study #1's ratchet — defines a failure class structurally unreachable in codeguesser's static-content domain.
+- New section **"On AI-character voice integrity"** introduced for rule #35 — distinct from the trust-boundary class (rules 22-26) because the failure mode is *model-controlled output*, not *user-controlled input*. Generalizes beyond clones to any LLM-driven character surface (NPC dialogue, AI companions, narrator voice, in-game chat).
+- **References** section now lists case study #2 (PDLC) as the graduation-trigger study, replacing its prior "queued" status.
+
+### Changed
+- **Distribution vs Graduation** section: framework graduation status flipped from **pending** → **achieved 2026-04-26**. Now lists the three graduation conditions with checkmarks against PDLC's adoption-without-modification + earned-rule-absent-from-case-#1 evidence. Phase 2 (`codex-gdlc-wizard`) and Phase 3 (homebrew/gh) gates explicitly unblocked.
+- `GDLC.md` header: status line bumped v0.3 → v0.4. Last-updated date moved to 2026-04-26. Doc subtitle changed from "Playbook" to "Framework" — playbook earned framework status this release.
+- Intro paragraph rewritten: "playbook, not framework" → "graduated framework as of 2026-04-26."
+
+### Rationale
+
+Case study #2 (PDLC) ran cycle 1 (gameplay-matrix, browser clone visualizer) on 2026-04-19 against the upstream `/gdlc` skill installed verbatim via `/gdlc-setup`. The Skeptic persona's finding #4 surfaced LLM-architecture vocabulary leaking into the clone's mirror voice ("weights", "system_prompt.txt", "cusum_high=9.57", raw SQL fences). PDLC logged this as case-study earned rule #1 in `~/pdlc/GDLC.md` (line 125), explicitly noting it was *not* in codeguesser's ratchet — and it couldn't have been: codeguesser's content is static code snippets, not LLM-generated dialogue, so the architecture-leak failure mode was structurally absent from case study #1's domain.
+
+This satisfies the **xdlc graduation rule** (`~/xdlc/README.md` § "Skills first → wizard later" + § "Case study first, framework second"):
+- ✅ Adoption without modification — PDLC installed skill verbatim (provenance: `~/pdlc/tests/__gdlc_upstream__/PROVENANCE.md`)
+- ✅ Earned rule absent from case #1 — verified by `grep -ni "LLM\|mirror voice\|architecture scrub" ~/codeguesser/GDLC.md` returning zero hits
+
+### Lesson recorded back into `~/xdlc/README.md`
+
+The graduation-gate verification protocol previously read *"the second project produces at least one earned rule that wasn't in the case-study-1 ratchet"* — ambiguous on whether "produces" means "logged in case-study `GDLC.md` with verified novelty" vs. "blessed via an explicit graduation ceremony in upstream playbook." A 2026-04-26 session read it as the latter and recommended *"wait"* for ~7 days after rule #35 had already been logged in `~/pdlc/GDLC.md`. The xdlc README now amends the verification protocol explicitly: a rule logged in case-study `GDLC.md` with `grep`-verified absence from case #1's ratchet **satisfies the gate** without requiring further upstream blessing. See `~/xdlc/README.md` § "Graduation-Gate Verification Protocol".
+
+### Phase 2/3 unblocking
+
+Per `ROADMAP.md` non-goals (now amended): "Do not start Phase 2 or 3 work until at least one additional case study (PDLC) ships an earned rule that wasn't in codeguesser's ratchet" — gate met. Phase 2 (`codex-gdlc-wizard`) and Phase 3 (`homebrew-gdlc-wizard`, `gh-gdlc-wizard`) are now eligible to start. Independent prioritization continues — pick whichever has the lowest blast radius first, do not bundle.
+
 ## [0.4.1] - 2026-04-19
 
 ### Changed

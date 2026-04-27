@@ -1,6 +1,6 @@
 # Roadmap — GDLC Distribution
 
-> **Status (2026-04-26):** Phase 1 ✅ **SHIPPED + PUBLISHED**. `BaseInfinity/claude-gdlc-wizard` v0.2.2 is live on npm. Both consumer install paths verified: `npx -y claude-gdlc-wizard init` and `curl -fsSL …/install.sh | bash`. Codex round-2 CERTIFIED 9/10. Trusted Publishing (`.github/workflows/npm-publish.yml`, OIDC) wired for v0.2.3+ — future releases auto-publish on `git push --tags` with SLSA provenance, no NPM_TOKEN required. Path A consolidation complete; the legacy `BaseInfinity/gdlc` repo is archived. Phases 2 (`codex-gdlc-wizard`) and 3 (Homebrew/gh CLI) remain open.
+> **Status (2026-04-26):** Phase 1 ✅ **SHIPPED + PUBLISHED**. `BaseInfinity/claude-gdlc-wizard` v0.2.2 live on npm. **Framework GRADUATED 2026-04-26** — playbook bumped to v0.4 with rule #35 (LLM-architecture vocabulary scrub for AI-character voices), the first earned rule from case study #2 (PDLC) absent from case study #1's ratchet. Graduation gate (per xdlc § "Case study first, framework second") fully met: adoption without modification ✅, earned rule absent from case #1 ✅. **Phases 2 (`codex-gdlc-wizard`) and 3 (Homebrew/gh CLI) are now UNBLOCKED.** See `PLAYBOOK_CHANGELOG.md` v0.5.0 for full graduation details.
 
 ## North star
 
@@ -66,11 +66,11 @@ Per [xdlc rule](https://github.com/BaseInfinity/xdlc): "Case study first. Framew
 
 | Case study | Status |
 |---|---|
-| #1 codeguesser | ✅ 17 playtests, 355+ tests, 26 earned rules — graduation criterion met |
-| #2 pdlc/TamAGI | 🔄 in progress — consuming the wizard now |
-| #3, #4, #5 | ⏸ queued (another game project, Canvas-based project, terminal clone) |
+| #1 codeguesser | ✅ 17 playtests, 355+ tests, 26 earned rules — distribution-readiness criterion met |
+| #2 pdlc/TamAGI | ✅ **GRADUATION-TRIGGER** — 3 cycles complete, earned rule #35 (LLM-architecture vocabulary scrub) absent from case #1's ratchet. Verified 2026-04-26 |
+| #3, #4, #5 | ⏸ queued (another game project, Canvas-based project, terminal clone) — feed earned rules back into playbook; will trigger structural reshape when 3rd case lands |
 
-Phase 1 was greenlit because case study #1 produced enough generalizable signal. Case study #2 is now exercising the install path; remaining case studies will validate cross-domain portability and feed earned rules back into the playbook.
+Phase 1 was greenlit because case study #1 produced enough generalizable signal for distribution-readiness. Framework graduation arrived on 2026-04-26 when case study #2 (PDLC) installed the upstream `/gdlc` skill verbatim and earned a rule structurally unreachable in case #1's domain (LLM-driven character voice, vs. codeguesser's static-content domain). Case studies #3+ will continue feeding the playbook and may eventually trigger structural reshape (splitting the playbook by surface class, promoting case-study ratchet rules into playbook bodies).
 
 ## Phase 2 — `codex-gdlc-wizard`
 
@@ -95,7 +95,7 @@ Each is a separate small repo. Don't bundle.
 - **Do not add existence tests.** Every test proves output quality (Prove-It-Gate).
 - **Do not rename `BaseInfinity/claude-gdlc-wizard`.** Naming convention locked: `<host>-<dlc>-wizard`.
 - **Do not add a `.gdlc/` scaffold to `~/xdlc/`** — xdlc is a registry, not a GDLC consumer.
-- **Do not start Phase 2 or 3 work until at least one additional case study (PDLC) ships an earned rule that wasn't in codeguesser's ratchet.** That's the generalization signal that justifies further distribution surface.
+- ~~**Do not start Phase 2 or 3 work until at least one additional case study (PDLC) ships an earned rule that wasn't in codeguesser's ratchet.**~~ **GATE MET 2026-04-26** — PDLC's earned rule #35 (LLM-architecture vocabulary scrub) verified absent from codeguesser's ratchet. Phase 2 + 3 unblocked. Independent prioritization rule still applies: pick whichever has the lowest blast radius first, do not bundle.
 
 ## When you pick this up (Phase 2 or 3)
 

@@ -1,11 +1,11 @@
 <!-- GDLC Playbook — case-study-agnostic -->
-<!-- Status: v0.3 — codeguesser case study #1 deepened through Playtest #18. 34 earned rules. Distribution-ready (gdlc-setup + gdlc-update skills extracted 2026-04-19); awaiting PDLC validation before framework graduation. -->
+<!-- Status: v0.4 — GRADUATED 2026-04-26. PDLC (case study #2) earned rule #35 (LLM-architecture vocabulary scrub) on 2026-04-19, verified absent from codeguesser's ratchet. 35 earned rules across 8 sections. Phase 2 (codex-gdlc-wizard) and Phase 3 (homebrew/gh) gates unblocked. -->
 <!-- Created: 2026-04-18 -->
-<!-- Last updated: 2026-04-19 (gdlc-setup + gdlc-update wizard pair extracted — distribution-readiness, not graduation) -->
+<!-- Last updated: 2026-04-26 (framework graduated — case study #2 produced rule #35, the first generalization-signal rule absent from case #1) -->
 
-# GDLC — Game Development Lifecycle (Playbook)
+# GDLC — Game Development Lifecycle (Framework)
 
-> **This is a playbook, not a framework.** Per the "case study first, framework second" rule, GDLC has one proven case study ([codeguesser](https://github.com/stefanayala/codeguesser)) and case study #2 queued. The `gdlc-setup` + `gdlc-update` skill pair exists (distribution-readiness), but framework graduation requires case study #2 to earn a rule not present in case study #1.
+> **Graduated framework as of 2026-04-26.** Per the "case study first, framework second" rule, GDLC now has two case studies that have independently produced earned rules: [codeguesser](https://github.com/stefanayala/codeguesser) (case study #1 — code-content game, 26 earned rules) and [PDLC](https://github.com/BaseInfinity/pdlc) (case study #2 — LLM-driven clone visualizer, 1 earned rule absent from case #1's ratchet so far). The `gdlc-setup` + `gdlc-update` + `gdlc-feedback` skill triple ships via `claude-gdlc-wizard` and is now framework-grade. Phase 2 (`codex-gdlc-wizard`) and Phase 3 (homebrew / gh) distribution gates are unblocked.
 
 ## Why GDLC exists
 
@@ -191,6 +191,9 @@ Each rule below is earned from a specific case. Rules without a specific inciden
 25. **"Silently defaults" is a design smell at trust boundaries.** (Earned P18 P1-A.) Loud failure beats quiet fallback. `?replay=X` without `?seed=` silently substituting `Math.random()` produces a ghost URL that *looks* replayed but diverges from step one — "works but wrong" is strictly worse than "doesn't work" because it masquerades as success. Either honor required params together, or ignore the optional surface entirely.
 26. **Fail-safe decoders over strict decoders at user-controlled boundaries.** (Earned v0.11 ship, confirmed P18.) A malformed `?replay=`, truncated URL, old-format share, or copy-paste error should return a sentinel empty value, not throw. The page keeps working; the broken decoder surface just contributes nothing. Strict decoders belong behind validated internal boundaries; user-controlled surfaces absorb garbage quietly.
 
+### On AI-character voice integrity
+35. **AI-character output must scrub LLM-architecture vocabulary at the response boundary.** (Earned PDLC cycle 1, Skeptic persona, finding #4 — first earned rule from case study #2 absent from case study #1's ratchet, satisfying graduation criterion #2 on 2026-04-19.) When a game character is rendered by an LLM, the character's voice has two distinct failure modes: **fabrication** (claims that betray the character doesn't know what they should know) and **architecture-leak** (vocabulary that betrays the LLM substrate — "as an AI", "I'm an LLM", "my weights", "system_prompt", internal metric names like CUSUM or "drift at N", raw code fences emitting SQL/JSON the character would never produce). Fabrication-guards (canonical-fact lookups, pushback patterns, surveillance-scrubs) defend the first class; an **architecture-scrub at the response boundary** defends the second. Both belong in any LLM-driven AI-character pipeline. Distinct from the trust-boundary class (rules 22-26): trust-boundary rules guard against *attacker-controlled input*; architecture-scrub guards against *model-controlled output*. A game with an AI character that omits this gate ships a voice that occasionally announces it's a model. Generalizes beyond clones to NPC dialogue, AI companions, narrator voice, in-game chat — any surface where an LLM's output is rendered as character speech.
+
 ### On methodology itself
 27. **Rules only deserve their line after solving a concrete case.** If a rule has no incident behind it, it's cargo-cult.
 28. **Keep a "What's Working" section in the project's GDLC.md parallel to the findings ledger.** When a methodological change proves itself across 2+ playtests (anti-confusion prefix, persona-prompt format, cycle selection), log it there with the date + cycle numbers that confirmed it. Without this section, successful process changes get forgotten and re-invented at cost.
@@ -236,29 +239,30 @@ Cost: GDLC additions run ~10-20 minutes per feature. Features where cost isn't w
 
 ## Distribution vs Graduation
 
-Two distinct milestones, historically conflated:
+Two distinct milestones, both now achieved:
 
 ### Distribution-readiness (achieved 2026-04-19)
 
-The `gdlc-setup` + `gdlc-update` skill pair ships via `npx claude-gdlc-wizard init` (Path A consolidation, v0.2.0+). Any consumer project (PDLC, or a future case study) can run the CLI to install the skill suite into `.claude/skills/`, then `/gdlc-setup` to scaffold a case-study `GDLC.md`, and `/gdlc-update` later to pull playbook changes via WebFetch + drift detection. This is an **ergonomics gate** — it removes the friction of manual copy-paste, so case studies have a clean adoption path.
+The `gdlc-setup` + `gdlc-update` + `gdlc-feedback` skill triple ships via `npx claude-gdlc-wizard init` (Path A consolidation, v0.2.0+). Any consumer project (PDLC, or a future case study) can run the CLI to install the skill suite into `.claude/skills/`, then `/gdlc-setup` to scaffold a case-study `GDLC.md`, and `/gdlc-update` later to pull playbook changes via WebFetch + drift detection. This is an **ergonomics gate** — it removes the friction of manual copy-paste, so case studies have a clean adoption path.
 
-Distribution-readiness is **not** a quality signal about the playbook. It says "the install path works", not "the playbook is generalizable". A playbook can be distributable and still be wrong.
+Distribution-readiness alone is **not** a quality signal about the playbook. It says "the install path works", not "the playbook is generalizable". A playbook can be distributable and still be wrong.
 
-### Framework graduation (pending)
+### Framework graduation (achieved 2026-04-26)
 
-The playbook earns framework status **only after**:
+The playbook earned framework status when the following conditions all held:
 
-1. A second project independently adopts the skill and confirms the patterns (PDLC queued — install path now frictionless via `/gdlc-setup`).
-2. The second project produces at least one earned rule that **wasn't** in the case-study-1 ratchet — proving the playbook is generalizable, not just codeguesser-shaped.
-3. A third case study would then trigger any structural reshuffling (e.g. splitting the playbook by surface class, promoting rules from case-study ledgers into playbook bodies).
+1. ✅ **Second-project adoption without modification.** PDLC installed `/gdlc` via `/gdlc-setup` and ran cycle 1 (gameplay-matrix, browser clone visualizer) on 2026-04-19. Skill installed verbatim — see `~/pdlc/tests/__gdlc_upstream__/PROVENANCE.md`.
+2. ✅ **Earned rule absent from case study #1's ratchet.** Cycle 1 surfaced the LLM-architecture-vocabulary leak class (rule #35 above), originally logged in `~/pdlc/GDLC.md` line 125 as case-study earned rule #1. Verified absent from `~/codeguesser/GDLC.md` (zero hits for "LLM" / "mirror voice" / "architecture scrub"). The architecture-leak failure mode is structurally absent from codeguesser's domain — codeguesser's content is static code snippets, not LLM-generated character dialogue, so case #1 could not have surfaced this class.
+3. ⏸ **Third-case-study reshuffling** remains a future trigger (splitting the playbook by surface class, promoting rules from case-study ledgers into playbook bodies). Not required for graduation; required only for structural reshape.
 
-Until graduation, this doc is a playbook, the `/gdlc` skill is its enforceable form, and the setup/update pair is distribution infrastructure. The pair's existence means nothing about the rules inside the playbook — those still need case-study-2 validation before any rule gets promoted or pruned.
+The wizard pair was extracted early (2026-04-19, distribution-readiness) to remove install friction so the case-study-2 signal — does the playbook generalize? — wasn't confounded by install noise. That bet paid off: PDLC's first cycle ran cleanly on the upstream skill verbatim, surfaced a real failure mode, earned a rule the original case study couldn't have earned. Graduation gate met one cycle into adoption.
 
-**Why extract the wizard pair early?** Case study #2 (PDLC) was blocked on adoption friction — manually copying `SKILL.md` + constructing a case-study stub is error-prone, and the errors compound (wrong skill version → wrong persona matrix → wrong cycle selection). Extracting the wizard pair moves the friction to zero, so the case study #2 signal — does the playbook generalize? — isn't confounded by install noise.
+**What graduation unlocks:** Phase 2 (`codex-gdlc-wizard` — OpenAI Codex CLI adapter) and Phase 3 (`homebrew-gdlc-wizard` tap, `gh-gdlc-wizard` extension) per `ROADMAP.md`. The case-study-graduation gate that previously blocked these phases is now satisfied.
 
 ## References
 
 - Case study #1 (proving ground): `codeguesser/GDLC.md` — 18 playtests, 384 regression tests, 32+ project-earned rules (v0.11 ship + Playtest #18 integrated 2026-04-18).
-- Case study #2 (queued): a second project (PDLC — pygame/AI lifecycle) will run `/gdlc-setup` to install the skill and run its first playtest under the GDLC playbook. Framework-graduation signal requires case #2 to produce at least one earned rule that wasn't in case #1's ratchet.
+- Case study #2 (graduation-trigger): `~/pdlc/GDLC.md` — installed `/gdlc` skill verbatim, completed cycle 1 (gameplay-matrix, browser clone visualizer) on 2026-04-19, earned rule #35 (LLM-architecture vocabulary scrub) absent from case #1's ratchet. Cycles 2 + 3 followed on 2026-04-26 (pre-demo smoke + half-conversation rendering ratchet).
 - Install: `npx claude-gdlc-wizard init` then `/gdlc-setup` (first install in a consumer project), `/gdlc-update` (pull skill + new playbook rules from upstream `BaseInfinity/claude-gdlc-wizard`).
 - SDLC sibling: `sdlc-wizard` plugin.
+- XDLC registry: `~/xdlc/README.md` — registered status: GDLC graduated 2026-04-26.
