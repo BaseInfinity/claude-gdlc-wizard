@@ -1,7 +1,7 @@
 {
   "name": "claude-gdlc-wizard",
   "version": "0.2.2",
-  "description": "GDLC enforcement for Claude Code — persona-driven playtest cycles, triangulated findings, ratchet-only-tightens. Sibling to claude-sdlc-wizard, for games instead of code.",
+  "description": "GDLC enforcement for Claude Code \u2014 persona-driven playtest cycles, triangulated findings, ratchet-only-tightens. Sibling to claude-sdlc-wizard, for games instead of code.",
   "bin": {
     "gdlc-wizard": "cli/bin/gdlc-wizard.js"
   },
@@ -12,7 +12,8 @@
     ".claude-plugin/",
     "CLAUDE_CODE_GDLC_WIZARD.md",
     "CHANGELOG.md",
-    "README.md"
+    "README.md",
+    "AI_SETUP_LANES.md"
   ],
   "keywords": [
     "claude-code",
