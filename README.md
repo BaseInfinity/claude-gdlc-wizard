@@ -91,3 +91,13 @@ File feedback using `/gdlc-feedback` from a Claude Code session. It creates a st
 ## License
 
 MIT.
+
+## AI Setup Lanes
+
+Three recommended setups in [`AI_SETUP_LANES.md`](AI_SETUP_LANES.md):
+
+| Lane | Planner | Driver | Reviewer | When |
+|------|---------|--------|----------|------|
+| **A — GDLC Premium** | Opus 4.6 max | Opus 4.6 max | GPT-5.5 xhigh | Persona design, playtests, gameplay matrix, architecture |
+| **B — GDLC Saver** | Opus 4.6 max | Sonnet (latest) | GPT-5.5 xhigh | Routine impl, test maintenance, docs |
+| **C — GDLC Lite** | You | Haiku 4.5 | None | Build scripts, asset pipeline, config, grunt work |
