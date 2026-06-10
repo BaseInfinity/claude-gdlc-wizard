@@ -11,10 +11,10 @@
 | Wizard Version (upstream) | 1.36.1 at `~/tmp-refs/claude-sdlc-wizard/` (6 minor versions ahead of the disabled wrap; see `reference_sdlc_wizard_wrap.md` for re-enable + update paths) |
 | Setup Date | 2026-04-24 |
 | Claude Code Baseline | v2.1.69+ required (`InstructionsLoaded` hook, skill directory variable, Tasks system) |
-| Recommended Model | `opus[1m]` (Opus 4.7, 1M context) — `/model opus[1m]` |
+| Recommended Model | `claude-opus-4-6[1m]` (Opus 4.6 max, 1M context) — `/model claude-opus-4-6[1m]` |
 | Recommended Effort | `max` (default) / `xhigh` (floor) — `/effort max` at session start |
 
-> **Effort warning (Opus 4.7):** anything below `xhigh` causes shallow reasoning, skipped TDD, and SDLC non-compliance in practice. `max` is the working default for wizard/skill/CI code in this repo.
+> **Effort warning (Opus 4.6 max):** anything below `xhigh` causes shallow reasoning, skipped TDD, and SDLC non-compliance in practice. `max` is the working default — 4.6 is the only Opus where `max` doesn't overthink (per claude-sdlc-wizard v1.80.0 evidence). See [`AI_SETUP_LANES.md`](AI_SETUP_LANES.md) for the full lane breakdown.
 
 ## Why SDLC here
 
