@@ -1,6 +1,6 @@
 # Roadmap — GDLC Distribution
 
-> **Status (2026-04-26):** Phase 1 ✅ **SHIPPED + PUBLISHED**. `BaseInfinity/claude-gdlc-wizard` v0.2.2 live on npm. **Framework GRADUATED 2026-04-26** — playbook bumped to v0.4 with rule #35 (LLM-architecture vocabulary scrub for AI-character voices), the first earned rule from case study #2 (PDLC) absent from case study #1's ratchet. Graduation gate (per xdlc § "Case study first, framework second") fully met: adoption without modification ✅, earned rule absent from case #1 ✅. **Phases 2 (`codex-gdlc-wizard`) and 3 (Homebrew/gh CLI) are now UNBLOCKED.** See `PLAYBOOK_CHANGELOG.md` v0.5.0 for full graduation details.
+> **Status (2026-06-11):** Phase 1 ✅ **SHIPPED + PUBLISHED**. `BaseInfinity/claude-gdlc-wizard` v0.3.0 live on npm. **Framework GRADUATED 2026-04-26** — playbook bumped to v0.4 with rule #35 (LLM-architecture vocabulary scrub for AI-character voices), the first earned rule from case study #2 (PDLC) absent from case study #1's ratchet. Graduation gate (per xdlc § "Case study first, framework second") fully met: adoption without modification ✅, earned rule absent from case #1 ✅. **Phases 2 (`codex-gdlc-wizard`) and 3 (Homebrew/gh CLI) are now UNBLOCKED.** See `PLAYBOOK_CHANGELOG.md` v0.5.0 for full graduation details.
 
 ## North star
 
@@ -8,7 +8,7 @@ Mirror SDLC's distribution ecosystem:
 
 | Distribution repo | Host | Status | Phase |
 |---|---|---|---|
-| `BaseInfinity/claude-gdlc-wizard` | Claude Code | ✅ shipped — v0.2.2 on npm | Phase 1 |
+| `BaseInfinity/claude-gdlc-wizard` | Claude Code | ✅ shipped — v0.3.0 on npm | Phase 1 |
 | `BaseInfinity/codex-gdlc-wizard` | OpenAI Codex CLI | ⏸ pending | Phase 2 |
 | `BaseInfinity/gh-gdlc-wizard` | gh CLI extension | ⏸ pending | Phase 3 |
 | `BaseInfinity/homebrew-gdlc-wizard` | Homebrew tap | ⏸ pending | Phase 3 |
@@ -46,6 +46,7 @@ Source memory: `~/.claude/projects/-Users-stefanayala-codeguesser/memory/project
 | v0.2.0 | 2026-04-25 | **Path A consolidation** — framework playbook (`GDLC.md`) merged into wizard repo; `BaseInfinity/gdlc` deprecated |
 | v0.2.1 | 2026-04-25 | **Skill behavioral migration** — skills read project-local `CLAUDE_CODE_GDLC_WIZARD.md`, use `npx claude-gdlc-wizard check` for drift, WebFetch upstream playbook. No sibling clone required. |
 | v0.2.2 | 2026-04-26 | Issue-fix release (#1, #3, #4, #5, #7) + Codex round-1 hardening + Trusted Publishing workflow |
+| v0.3.0 | 2026-06-11 | AI Setup Lanes v2 port from sdlc-wizard — multi-lane setup flow (Quick/Standard/Deep) |
 
 **Distribution surfaces verified:**
 
