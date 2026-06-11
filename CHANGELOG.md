@@ -5,6 +5,15 @@ This file tracks the **distribution wizard** (CLI, plugin, hooks, install script
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-06-11
+
+**AI Setup Lanes v2 port from sdlc-wizard.** Adds the multi-lane setup flow (Quick, Standard, Deep) that adapts wizard installation depth to project complexity and user preference.
+
+### Added
+- **`AI_SETUP_LANES.md`** — complete v2 setup lanes document ported from `claude-sdlc-wizard`, adapted for GDLC context. Provides three installation paths (Quick lane for small projects, Standard lane for typical game repos, Deep lane for complex multi-module projects) with per-lane step registries and completion gates.
+
+---
+
 ## [0.2.2] — 2026-04-26
 
 **Issue-fix release.** Bundles the four playbook gaps surfaced by the codeguesser case study (issues #1, #3, #4) and the dogfooding finding from the codeguesser dual-install (issue #5).
