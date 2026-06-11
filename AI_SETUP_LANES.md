@@ -1,6 +1,6 @@
 # AI Setup Lanes
 
-Three recommended AI coding setups for this repo. Setups A and B are complete triads: **planner -> driver -> reviewer**. Setup C is a lightweight driver-only lane for operational grunt work.
+Three recommended AI game development setups for this repo. Setups A and B are complete triads: **planner -> driver -> reviewer**. Setup C is a lightweight driver-only lane for operational grunt work.
 
 This is **guidance, not a hard rule**. Maintainer override is always allowed.
 
@@ -64,13 +64,13 @@ Setup B is sufficient for routine work where a Sonnet driver can ship with a str
 | **Driver** | Sonnet 4.6 | Same model as Setup B driver — Max-bundled, no extra model to manage |
 | **Reviewer** | None | Blast radius too low for cross-model overhead |
 
-The "just do the thing" lane. No TDD enforcement, no cross-model review, no planning phase. You already know what to do — you just need a fast, cheap pair of hands.
+The "just do the thing" lane. No regression-test enforcement, no cross-model review, no planning phase. You already know what to do — you just need a fast, cheap pair of hands.
 
 ## When to Use Setup C
 
 Setup C is for work where GDLC discipline overhead exceeds the value:
 
-- Build scripts, deploy scripts
+- Build scripts, packaging scripts
 - Asset pipeline execution (texture baking, sprite atlas generation)
 - Config updates, env var changes
 - File moves, renames, bulk operations
@@ -82,7 +82,7 @@ Setup C is for work where GDLC discipline overhead exceeds the value:
 
 ## What Setup C explicitly skips
 
-- No TDD (no test-first for running a deploy script)
+- No playtest-first gate (no regression tests for running a packaging script)
 - No cross-model review (not worth the cost or time for grunt work)
 - No planning phase (you are the planner)
 - No effort escalation (Sonnet standard is plenty)
