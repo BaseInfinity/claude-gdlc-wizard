@@ -88,6 +88,16 @@ SDLC without GDLC = clean code that produces boring games. GDLC without SDLC = f
 
 File feedback using `/gdlc-feedback` from a Claude Code session. It creates a structured GitHub issue on [BaseInfinity/claude-gdlc-wizard](https://github.com/BaseInfinity/claude-gdlc-wizard) with stock labels (`bug` / `enhancement` / `question`) and a `[<type>]` title prefix.
 
+## XDLC Ecosystem
+
+| Wizard | Domain | npm | Repo |
+|--------|--------|-----|------|
+| **SDLC** | Software engineering | `agentic-sdlc-wizard` | [claude-sdlc-wizard](https://github.com/BaseInfinity/claude-sdlc-wizard) |
+| **GDLC** (this repo) | Game development | `claude-gdlc-wizard` | [claude-gdlc-wizard](https://github.com/BaseInfinity/claude-gdlc-wizard) |
+| **RDLC** | Research | `claude-rdlc-wizard` | [claude-rdlc-wizard](https://github.com/BaseInfinity/claude-rdlc-wizard) |
+| **Codex SDLC** | Codex CLI | `codex-sdlc-wizard` | [codex-sdlc-wizard](https://github.com/BaseInfinity/codex-sdlc-wizard) |
+| **OpenCode SDLC** | OpenCode | `opencode-sdlc-wizard` | [opencode-sdlc-wizard](https://github.com/BaseInfinity/opencode-sdlc-wizard) |
+
 ## License
 
 MIT.
