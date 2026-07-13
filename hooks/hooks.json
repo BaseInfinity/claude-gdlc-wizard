@@ -10,16 +10,6 @@
           }
         ]
       }
-    ],
-    "InstructionsLoaded": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/gdlc-instructions-loaded-check.sh"
-          }
-        ]
-      }
     ]
   }
 }

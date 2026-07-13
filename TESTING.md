@@ -41,7 +41,7 @@ The **testing diamond still applies** — just re-scoped:
                     └────────────────────────┘
                 ┌──────────────────────────────────┐
                 │   Integration (the bulk)          │  real tmpdirs, real hooks,
-                │   — 5 bash suites, 102 assertions │  real JSON validity, zero mocks
+                │   — 5 bash suites, 126 assertions │  real JSON validity, zero mocks
                 └──────────────────────────────────┘
             ┌──────────────────────────────────────────┐
             │   Contract / Prove-It-Gate (wide base)    │  liveness-checked contracts
@@ -54,34 +54,35 @@ Mocking rule: **none**. Tests run the actual binary against actual filesystems, 
 
 ## Test suites
 
-5 suites, 102 assertions total. Each file is independently runnable (`bash tests/<name>.sh`).
+5 suites, 126 assertions total. Each file is independently runnable (`bash tests/<name>.sh`).
 
-### tests/test-cli.sh (24 assertions — CLI integration)
+### tests/test-cli.sh (31 assertions — CLI integration)
 
 Runs the real `cli/bin/gdlc-wizard.js` binary. Covers:
 
 - `--help` / `--version` / unknown flags
 - `init` dry-run writes nothing, plans everything
-- `init` creates exactly 9 files (settings.json + 3 hook files + 4 skills + wizard doc)
+- `init` creates exactly 8 files (settings.json + 2 hook files + 4 skills + wizard doc), and migrates away legacy `instructions-loaded` hook files + settings entries from ≤v0.3.0 installs
+- Migration matrix spans **ordinary `init` and `init --force`**: the legacy sweep is unconditional (file removed, settings command stripped, emptied event key deleted), user hooks survive both when sharing an outer group with wizard/legacy commands and as separate user-owned outer groups under the same event, and `matcher` fields are preserved
 - File parity with `skills/` source (byte-identical)
 - `init --force` overwrites cleanly
 - `.gitignore` gets exactly `.claude/plans/` and `.claude/settings.local.json`, no dupes on re-run
 - Installed hooks are executable where required
-- `settings.json` is valid JSON, declares 2 events, uses `$CLAUDE_PROJECT_DIR` (never `${CLAUDE_PLUGIN_ROOT}`)
+- `settings.json` is valid JSON, declares exactly 1 event (`UserPromptSubmit`), uses `$CLAUDE_PROJECT_DIR` (never `${CLAUDE_PLUGIN_ROOT}`)
 - Hook content is **GDLC-specific** — no residual `SDLC BASELINE`, `setup-wizard`, `SDLC.md` strings
 - `check` reports MATCH / MISSING / JSON output correctly
 - `_find-gdlc-root.sh` IS in the CLI's FILES array (this is the fix for SDLC's silent install bug where its own helper was missing)
 
-### tests/test-hooks.sh (13 assertions — hook behavior)
+### tests/test-hooks.sh (14 assertions — hook behavior)
 
-Invokes the three shipped hook scripts with constructed fixtures. Covers:
+Invokes the two shipped hook scripts with constructed fixtures. Covers:
 
 - `_find-gdlc-root.sh` walks up from CWD and locates `GDLC.md` correctly
 - `gdlc-prompt-check.sh` emits `GDLC BASELINE` when `GDLC.md` is present + non-empty
 - `gdlc-prompt-check.sh` emits `SETUP NOT COMPLETE` when `GDLC.md` is empty (pointing to `/gdlc-setup`)
 - Silent outside a GDLC-managed project (exit 0, no output)
 - Always exit 0 (never blocks the user's prompt)
-- `gdlc-instructions-loaded-check.sh` stays silent on a valid state
+- `_find-gdlc-root.sh` also anchors on `CLAUDE_CODE_GDLC_WIZARD.md` (wizard-managed project without a GDLC.md yet)
 - CI YAML sanity check (basic parseability)
 
 ### tests/test-install-script.sh (18 assertions — structural + gated-live)
@@ -97,20 +98,20 @@ Validates `install.sh` without executing `curl | bash`. Covers:
 - At least one `claude-gdlc-wizard` reference
 - Live-install path gated behind `CLAUDE_GDLC_WIZARD_NPM_PUBLISHED=1` (package isn't on npm yet — flip the gate after publish to enable the end-to-end test)
 
-### tests/test-plugin.sh (20 assertions — plugin + CLI parity)
+### tests/test-plugin.sh (21 assertions — plugin + CLI parity)
 
 The P0 guard against plugin-vs-CLI drift. Covers:
 
 - `plugin.json` valid JSON, name kebab-case, version matches `package.json`
 - `hooks/hooks.json` uses `${CLAUDE_PLUGIN_ROOT}` — never `$CLAUDE_PROJECT_DIR`
 - `cli/templates/settings.json` uses `$CLAUDE_PROJECT_DIR` — never `${CLAUDE_PLUGIN_ROOT}`
-- Event parity: plugin `hooks.json` and CLI `settings.json` declare the **same** event set (today: `UserPromptSubmit` + `InstructionsLoaded`)
+- Event parity: plugin `hooks.json` and CLI `settings.json` declare the **same** event set (today: `UserPromptSubmit` only — `InstructionsLoaded` retired in v0.4.0)
 - `marketplace.json` valid, version matches
 - Skill + hook byte-parity between plugin path and CLI install path
 
 Swapping the two path-prefix vars silently breaks installs. These tests are the only line of defense; do not weaken them.
 
-### tests/test-skill-contracts.sh (27 assertions — Prove-It-Gate)
+### tests/test-skill-contracts.sh (42 assertions — Prove-It-Gate)
 
 Contract tests against the 4 skills and `CLAUDE_CODE_GDLC_WIZARD.md`. Covers:
 
@@ -125,6 +126,8 @@ Contract tests against the 4 skills and `CLAUDE_CODE_GDLC_WIZARD.md`. Covers:
 - Explicit allowlist with EXCLUDED class
 - Wizard doc has template + step registry + managed-files section + no stale SDLC refs
 - **v0.2.1 forbidden patterns:** no skill or wizard doc references legacy `~/gdlc/` paths or `BaseInfinity/gdlc` issue tracker (Path A consolidated to `claude-gdlc-wizard`)
+- **v0.4.0 install-topology contract:** live docs (wizard doc, README, TESTING.md, ARCHITECTURE.md, CLAUDE.md, and SDLC.md outside its clearly-marked disabled-wrap reference section) and all 4 shipped skills carry no stale pre-v0.4.0 topology counts and no live guidance for the `InstructionsLoaded` hook retired in v0.4.0
+- **Issue-#15 reviewer-sync contracts:** lanes doc + README reviewer rows name GPT-5.6 "Sol" (number + codename together, exact row count, substantive escalation terms, no stale GPT-5.5/5.4)
 
 ### Running the full suite
 
@@ -135,7 +138,7 @@ git checkout -- hooks/
 # All 5 suites sequentially, stop on first failure
 for t in tests/*.sh; do echo "--- $t"; bash "$t" || break; done
 
-# Expected: "All tests passed" from each, 102 total assertions, 0 failures
+# Expected: "All tests passed" from each, 126 total assertions, 0 failures
 ```
 
 ---
@@ -155,9 +158,9 @@ Known CI consideration: if the `xxd` or `jq` install step is removed, `tests/tes
 ```bash
 tmp=$(mktemp -d); cd "$tmp"
 node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js init
-# Expect: 9 files created under .claude/ + CLAUDE_CODE_GDLC_WIZARD.md + .gitignore
+# Expect: 7 files created under .claude/ + CLAUDE_CODE_GDLC_WIZARD.md + .gitignore
 node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js check
-# Expect: every installed item reports MATCH (settings + 3 hook files + 4 skills + wizard doc + 1 .gitignore row covering 2 entries = 10 rows), exit 0
+# Expect: every installed item reports MATCH (settings + 2 hook files + 4 skills + wizard doc + 1 .gitignore row covering 2 entries = 9 rows), exit 0
 node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js init
 # Expect: all SKIP, exit 0 (idempotent)
 node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js init --force
@@ -174,7 +177,7 @@ Feed `cli/init.js::mergeSettings` a pre-existing `.claude/settings.json` contain
 
 - **Live `curl | bash` install is gated** — package not on npm yet. Flip `CLAUDE_GDLC_WIZARD_NPM_PUBLISHED=1` after publish to exercise the full end-to-end path.
 - **Plugin-install detection not implemented** — SDLC's `cli/init.js` has a "dual-install" branch for when the plugin is already installed via Claude Code marketplace. Lower priority while there's no gdlc-wizard plugin distribution in the wild.
-- **Hook behavior under real `UserPromptSubmit` / `InstructionsLoaded` dispatch is not tested** — tests invoke the scripts directly with mock stdin. The actual CC dispatch is CC's concern; we validate output shape, not wiring.
+- **Hook behavior under real `UserPromptSubmit` dispatch is not tested** — tests invoke the scripts directly with mock stdin. The actual CC dispatch is CC's concern; we validate output shape, not wiring.
 - **Statistical / multi-trial regression testing** is not set up — SDLC wizard has 5-trial statistical harnesses for scoring variance. This repo's tests are deterministic contracts, so that apparatus isn't needed today. Reconsider if/when we add AI-scored correctness checks (e.g., "does the scaffolded `GDLC.md` match the target case-study shape").
 
 ---

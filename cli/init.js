@@ -21,7 +21,6 @@ const FILES = [
   { src: 'settings.json', dest: '.claude/settings.json', base: TEMPLATES_DIR },
   { src: 'hooks/_find-gdlc-root.sh', dest: '.claude/hooks/_find-gdlc-root.sh', base: REPO_ROOT },
   { src: 'hooks/gdlc-prompt-check.sh', dest: '.claude/hooks/gdlc-prompt-check.sh', executable: true, base: REPO_ROOT },
-  { src: 'hooks/gdlc-instructions-loaded-check.sh', dest: '.claude/hooks/gdlc-instructions-loaded-check.sh', executable: true, base: REPO_ROOT },
   { src: 'skills/gdlc/SKILL.md', dest: '.claude/skills/gdlc/SKILL.md', base: REPO_ROOT },
   { src: 'skills/gdlc-setup/SKILL.md', dest: '.claude/skills/gdlc-setup/SKILL.md', base: REPO_ROOT },
   { src: 'skills/gdlc-update/SKILL.md', dest: '.claude/skills/gdlc-update/SKILL.md', base: REPO_ROOT },
@@ -34,29 +33,31 @@ const WIZARD_HOOK_MARKERS = FILES
   .filter((f) => f.executable && f.dest.startsWith('.claude/hooks/'))
   .map((f) => path.basename(f.src));
 
-// Pre-rename hook artifacts shipped by older wizard versions. These are
-// unambiguously wizard-owned: settings entries get replaced (not appended-
-// alongside), disk files get removed, `check` flags any leftover as DRIFT.
+// Hook artifacts shipped by older wizard versions. Two generations:
+// pre-rename (≤ v0.2.0) and the InstructionsLoaded hook retired in v0.4.0 —
+// Claude Code discards that event's stdout, so the hook was a no-op (issue
+// #14). These are unambiguously wizard-owned: settings entries get dropped,
+// disk files get removed, `check` flags any leftover as DRIFT.
 const LEGACY_HOOK_FILES = [
   { dest: '.claude/hooks/instructions-loaded-check.sh', basename: 'instructions-loaded-check.sh' },
+  { dest: '.claude/hooks/gdlc-instructions-loaded-check.sh', basename: 'gdlc-instructions-loaded-check.sh' },
 ];
 
 const LEGACY_HOOK_MARKERS = LEGACY_HOOK_FILES.map((f) => f.basename);
 
 const GITIGNORE_ENTRIES = ['.claude/plans/', '.claude/settings.local.json'];
 
-function isWizardHookEntry(hookEntry) {
-  if (!hookEntry || !hookEntry.hooks) return false;
-  return hookEntry.hooks.some((h) =>
-    WIZARD_HOOK_MARKERS.some((marker) => h.command && h.command.includes(marker))
-  );
+function isWizardHookCommand(h) {
+  return WIZARD_HOOK_MARKERS.some((marker) => h && h.command && h.command.includes(marker));
 }
 
-function isLegacyHookEntry(hookEntry) {
-  if (!hookEntry || !hookEntry.hooks) return false;
-  return hookEntry.hooks.some((h) =>
-    LEGACY_HOOK_MARKERS.some((marker) => h.command && h.command.includes(marker))
-  );
+function isLegacyHookCommand(h) {
+  return LEGACY_HOOK_MARKERS.some((marker) => h && h.command && h.command.includes(marker));
+}
+
+function isWizardHookEntry(hookEntry) {
+  if (!hookEntry || !Array.isArray(hookEntry.hooks)) return false;
+  return hookEntry.hooks.some(isWizardHookCommand);
 }
 
 function mergeSettings(existingPath, templatePath, force) {
@@ -65,6 +66,27 @@ function mergeSettings(existingPath, templatePath, force) {
     const template = JSON.parse(fs.readFileSync(templatePath, 'utf8'));
 
     if (!existing.hooks) existing.hooks = {};
+
+    // Drop legacy wizard commands across ALL existing events, not just the
+    // template's — a retired event (InstructionsLoaded, gone in v0.4.0) no
+    // longer appears in the template, so a template-driven sweep would
+    // strand its stale entry forever. Wizard-owned, so not gated on --force.
+    // Sweep at the nested-command level: a user hook sharing an outer group
+    // with a legacy command must survive, as must group fields like matcher.
+    // Walk groups back-to-front so splice indices stay valid.
+    for (const event of Object.keys(existing.hooks)) {
+      for (let i = existing.hooks[event].length - 1; i >= 0; i--) {
+        const group = existing.hooks[event][i];
+        if (!group || !Array.isArray(group.hooks)) continue;
+        group.hooks = group.hooks.filter((h) => !isLegacyHookCommand(h));
+        if (group.hooks.length === 0) {
+          existing.hooks[event].splice(i, 1);
+        }
+      }
+      if (existing.hooks[event].length === 0) {
+        delete existing.hooks[event];
+      }
+    }
 
     for (const [event, templateEntries] of Object.entries(template.hooks || {})) {
       if (!existing.hooks[event]) {
@@ -75,20 +97,17 @@ function mergeSettings(existingPath, templatePath, force) {
       // Each template event has exactly one wizard hook entry.
       const templateEntry = templateEntries[0];
 
-      // Drop legacy wizard entries first (unambiguously wizard-owned, regardless of force).
-      // Walk back-to-front so splice indices stay valid.
-      for (let i = existing.hooks[event].length - 1; i >= 0; i--) {
-        if (isLegacyHookEntry(existing.hooks[event][i])) {
-          existing.hooks[event].splice(i, 1);
-        }
-      }
-
       const existingIdx = existing.hooks[event].findIndex(isWizardHookEntry);
 
       if (existingIdx === -1) {
         existing.hooks[event].push(templateEntry);
       } else if (force) {
-        existing.hooks[event][existingIdx] = templateEntry;
+        // Replace only the wizard command inside the group — a user command
+        // nested alongside it, and group fields like matcher, must survive.
+        const group = existing.hooks[event][existingIdx];
+        const firstIdx = group.hooks.findIndex(isWizardHookCommand);
+        group.hooks = group.hooks.filter((h) => !isWizardHookCommand(h));
+        group.hooks.splice(firstIdx, 0, templateEntry.hooks[0]);
       }
     }
 

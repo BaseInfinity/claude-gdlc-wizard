@@ -10,7 +10,7 @@
 | Wizard Version (last loaded) | 1.30.0 — from local plugin at `~/.claude/plugins-local/.sdlc-wizard-wrap.disabled-2026-04-24/` (DISABLED via dir-rename on 2026-04-24; in-session hooks remain in memory until session restart). See `reference_sdlc_wizard_wrap.md` in global memory for the original name and re-enable path. |
 | Wizard Version (upstream) | 1.36.1 at `~/tmp-refs/claude-sdlc-wizard/` (6 minor versions ahead of the disabled wrap; see `reference_sdlc_wizard_wrap.md` for re-enable + update paths) |
 | Setup Date | 2026-04-24 |
-| Claude Code Baseline | v2.1.69+ required (`InstructionsLoaded` hook, skill directory variable, Tasks system) |
+| Claude Code Baseline | v2.1.69+ required (skill directory variable, Tasks system) |
 | Recommended Model | `claude-opus-4-6[1m]` (Opus 4.6 max, 1M context) — `/model claude-opus-4-6[1m]` |
 | Recommended Effort | `max` (default) / `xhigh` (floor) — `/effort max` at session start |
 
@@ -58,7 +58,7 @@ SDLC on this repo keeps the distribution machinery honest. GDLC is not consumed 
 What this means in practice:
 
 - **Hook enforcement is off.** No `UserPromptSubmit` / `InstructionsLoaded` / `PreToolUse` script fires for SDLC discipline on this repo's development.
-- **The discipline still applies** — it's just doc-driven and test-driven now, not hook-driven. The compliance gate is `tests/*.sh` (96 assertions, CI-enforced) + this file's verification block + Codex cross-model review on every release.
+- **The discipline still applies** — it's just doc-driven and test-driven now, not hook-driven. The compliance gate is `tests/*.sh` (126 assertions, CI-enforced) + this file's verification block + Codex cross-model review on every release.
 - **In-session behavior may differ** — Claude Code can keep the previously-loaded hook in memory for the lifetime of an open session, so prompts still see `SDLC BASELINE` reminders until session restart.
 
 If you want to restore active hook enforcement, rename the wrap back (`mv .sdlc-wizard-wrap.disabled-2026-04-24 sdlc-wizard-wrap`) and start a new session. See `~/.claude/projects/-Users-stefanayala/memory/reference_sdlc_wizard_wrap.md` for the wrap mechanics.
@@ -89,7 +89,7 @@ These four skills lived in the wrap plugin and were callable as `/sdlc-wizard:<n
 
 ## Tests as the compliance gate
 
-- Full suite (96 assertions, 0 failures) must be green before any commit
+- Full suite (126 assertions, 0 failures) must be green before any commit
 - Run: `git checkout -- hooks/ && for t in tests/*.sh; do bash "$t" || break; done`
 - CI re-runs on push + PR via `.github/workflows/ci.yml`
 

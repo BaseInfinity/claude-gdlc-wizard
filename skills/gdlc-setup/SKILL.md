@@ -35,7 +35,7 @@ Read `CLAUDE_CODE_GDLC_WIZARD.md` at the consumer project root (done above — t
 
 ### step-0.2 — Verify Wizard Install
 
-The CLI installs the wizard surface before this skill runs (settings.json, 3 hook files, 4 skill files, wizard doc, .gitignore additions). Delegate the full verification to the CLI rather than partial-test the surface:
+The CLI installs the wizard surface before this skill runs (settings.json, 2 hook files, 4 skill files, wizard doc, .gitignore additions). Delegate the full verification to the CLI rather than partial-test the surface:
 
 ```bash
 npx claude-gdlc-wizard check

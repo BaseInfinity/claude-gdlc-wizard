@@ -5,6 +5,10 @@
 
 set -e
 
+# Portable locale: an inherited broken LC_ALL makes bash emit setlocale
+# warnings on stderr, which tests capturing hook/CLI output would misread.
+export LC_ALL=C LANG=C
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PASSED=0
@@ -183,7 +187,7 @@ test_cli_installs_from_plugin_source() {
             ok=false
         fi
     done
-    for hook in gdlc-prompt-check.sh gdlc-instructions-loaded-check.sh _find-gdlc-root.sh; do
+    for hook in gdlc-prompt-check.sh _find-gdlc-root.sh; do
         local installed="$d/.claude/hooks/$hook"
         local source="$REPO_ROOT/hooks/$hook"
         [ -f "$installed" ] || { ok=false; continue; }
@@ -260,7 +264,7 @@ print(' '.join(sorted(d.get('hooks', {}).keys())))
 test_plugin_hook_scripts_exist() {
     local ok=true
     local missing=""
-    for script in gdlc-prompt-check.sh gdlc-instructions-loaded-check.sh _find-gdlc-root.sh; do
+    for script in gdlc-prompt-check.sh _find-gdlc-root.sh; do
         if [ ! -f "$REPO_ROOT/hooks/$script" ]; then
             ok=false
             missing="$missing $script"
@@ -277,16 +281,35 @@ test_plugin_hook_scripts_executable() {
     local ok=true
     local missing=""
     # _find-gdlc-root.sh is sourced, not executed — no +x required.
-    for script in gdlc-prompt-check.sh gdlc-instructions-loaded-check.sh; do
+    for script in gdlc-prompt-check.sh; do
         if [ ! -x "$REPO_ROOT/hooks/$script" ]; then
             ok=false
             missing="$missing $script"
         fi
     done
     if [ "$ok" = true ]; then
-        pass "Executable hook scripts (gdlc-prompt-check, gdlc-instructions-loaded-check) have +x"
+        pass "Executable hook scripts (gdlc-prompt-check) have +x"
     else
         fail "hooks/ non-executable:$missing"
+    fi
+}
+
+test_hooks_json_only_user_prompt_submit() {
+    # v0.4.0: InstructionsLoaded is retired — Claude Code discards its stdout
+    # (no context injection, exit 2 ignored), so a hook there is a no-op.
+    # The plugin must declare exactly one event: UserPromptSubmit.
+    local file="$REPO_ROOT/hooks/hooks.json"
+    [ -f "$file" ] || { fail "hooks.json missing"; return; }
+    local events
+    events=$(python3 -c "
+import json
+with open('$file') as f: d = json.load(f)
+print(' '.join(sorted(d.get('hooks', {}).keys())))
+" 2>/dev/null)
+    if [ "$events" = "UserPromptSubmit" ]; then
+        pass "hooks.json declares only UserPromptSubmit (InstructionsLoaded retired)"
+    else
+        fail "hooks.json should declare exactly UserPromptSubmit, got: '$events'"
     fi
 }
 
@@ -360,6 +383,7 @@ test_hooks_json_exists
 test_hooks_json_valid
 test_hooks_json_uses_plugin_root
 test_hooks_json_event_parity
+test_hooks_json_only_user_prompt_submit
 test_plugin_hook_scripts_exist
 test_plugin_hook_scripts_executable
 test_marketplace_json_exists

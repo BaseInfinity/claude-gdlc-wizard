@@ -1,0 +1,18 @@
+{
+  "review_id": "v0.4.0-fable-audit-001",
+  "round": 3,
+  "responding_to": ".reviews/review-v0.4.0-round2.md",
+  "responses": [
+    {
+      "finding": "1",
+      "action": "FIXED",
+      "summary": "Round-2 gap closed: the force/non-force regression matrix is now persistent in tests/test-cli.sh. (1) test_ordinary_init_sweeps_legacy_settings seeds a ≤v0.3.0 install (legacy hook file + legacy-only InstructionsLoaded group + a SEPARATE user-owned outer group with matcher under UserPromptSubmit) and runs ordinary `init` — NO --force. Asserts: legacy hook file removed, InstructionsLoaded event key exactly absent, user outer group + matcher survive, wizard group added as a separate sibling (len(UserPromptSubmit)==2), wizard command present. (2) test_force_init_preserves_separate_user_groups seeds a wizard group (stale command variant) plus a SEPARATE user-owned outer group under the same event and runs `init --force`. Asserts: both outer groups survive (len==2), wizard command replaced in place with the exact template command (read from cli/templates/settings.json at test time), stale variant gone, user group + matcher untouched. Mutation evidence — your exact round-2 mutations now turn RED: (a) gating all merging on --force (`if (!force) return null;` at top of mergeSettings) fails ONLY the ordinary-init test, cli 30/1 (was 29/0 in your run); (b) discarding sibling outer entries after the force replace (`existing.hooks[event] = [group];`) fails ONLY the separate-group test, cli 30/1 (was 29/0 in your run). Both mutations reverted; clean cli suite 31/0."
+    },
+    {
+      "finding": "2",
+      "action": "FIXED",
+      "summary": "SDLC.md added to BOTH topology-guard loops in tests/test-skill-contracts.sh::test_live_docs_match_install_topology, with the precise exemption you specified: guarded_doc_content() (defined above the test) strips only the clearly-marked '## Hooks (current state — no active SDLC plugin)' section — the disabled sdlc-wizard-wrap reference documentation — via awk section-boundary matching (skip from that heading to the next '## ' heading); every other line of SDLC.md is guarded like the other live docs. Mutation evidence: (a) your exact round-2 mutation — a live '10 rows' claim appended to SDLC.md outside the section — now fails contracts 41/1 with token stale-topology-count-in-SDLC.md (was 42/0 in your run); (b) live InstructionsLoaded guidance appended outside the section fails 41/1 with live-instructionsloaded-guidance-in-SDLC.md; (c) precision check — a '10 rows' string inserted INSIDE the exempt disabled-wrap section stays green 42/0, and the clean file passes even though the exempt section legitimately contains two non-retirement InstructionsLoaded lines (SDLC.md:60, SDLC.md:71), proving the exemption is section-scoped, not file-wide. All mutations reverted; contracts suite 42/0."
+    }
+  ],
+  "additional_changes": "Assertion counts re-synced after the two new CLI tests: whole-suite 124 → 126 (cli 29 → 31; hooks/install/plugin/contracts unchanged at 14/18/21/42). Updated: CHANGELOG.md v0.4.0 Added section (now '11 new test assertions (115 → 126)', CLI bullet describes the round-2 force/non-force matrix, contract bullet notes SDLC.md coverage + exemption), TESTING.md (per-suite header 31, migration-matrix bullet, v0.4.0 topology-contract bullet includes SDLC.md), CLAUDE.md commands table (31/42 — also corrects two per-suite counts that had been stale since before round 1), ARCHITECTURE.md tests block (31/42), SDLC.md compliance-gate lines (126). No production code changed in round 3 — tests and docs only; cli/init.js is byte-identical to what you reviewed in round 2."
+}

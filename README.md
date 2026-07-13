@@ -27,7 +27,7 @@ This wizard installs the GDLC skill suite into any Claude Code project: persona-
 
 ## Install
 
-Pick whichever fits your environment. All four paths land the same surface: 4 skills + 2 hooks + helper + settings.json + wizard doc. No sibling-repo clone required — the wizard is fully self-contained as of v0.2.1.
+Pick whichever fits your environment. All four paths land the same surface: 4 skills + 1 enforcement hook + 1 helper + settings.json + wizard doc. No sibling-repo clone required — the wizard is fully self-contained as of v0.2.1.
 
 ### Path 1 — `npx` (recommended)
 
@@ -61,7 +61,7 @@ rm -rf ~/tmp/claude-gdlc-wizard
 
 ### After install — every path
 
-In Claude Code, run `/gdlc-setup`. It auto-scans your project, asks the minimum, and scaffolds your `GDLC.md`. Verify with `npx claude-gdlc-wizard check` — expect every installed item (settings.json + 3 hook files + 4 skills + wizard doc + .gitignore additions = ~10 rows) to report `MATCH`.
+In Claude Code, run `/gdlc-setup`. It auto-scans your project, asks the minimum, and scaffolds your `GDLC.md`. Verify with `npx claude-gdlc-wizard check` — expect every installed item (settings.json + 2 hook files + 4 skills + wizard doc + .gitignore additions = 9 rows) to report `MATCH`.
 
 ## How It Works
 
@@ -108,6 +108,6 @@ Three recommended setups in [`AI_SETUP_LANES.md`](AI_SETUP_LANES.md):
 
 | Lane | Planner | Driver | Reviewer | When |
 |------|---------|--------|----------|------|
-| **A — GDLC Premium** | Opus 4.6 max | Opus 4.6 max | GPT-5.5 xhigh | Persona design, playtests, gameplay matrix, architecture |
-| **B — GDLC Saver** | Opus 4.6 max | Sonnet (latest) | GPT-5.5 xhigh | Routine impl, test maintenance, docs |
+| **A — GDLC Premium** | Opus 4.6 max | Opus 4.6 max | GPT-5.6 Sol xhigh | Persona design, playtests, gameplay matrix, architecture |
+| **B — GDLC Saver** | Opus 4.6 max | Sonnet (latest) | GPT-5.6 Sol xhigh | Routine impl, test maintenance, docs |
 | **C — GDLC Lite** | You | Haiku 4.5 | None | Build scripts, asset pipeline, config, grunt work |

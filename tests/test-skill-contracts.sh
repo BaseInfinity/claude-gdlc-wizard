@@ -16,6 +16,10 @@
 
 set -e
 
+# Portable locale: an inherited broken LC_ALL makes bash emit setlocale
+# warnings on stderr, which tests capturing hook/CLI output would misread.
+export LC_ALL=C LANG=C
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 WIZARD_DOC="$REPO_ROOT/CLAUDE_CODE_GDLC_WIZARD.md"
@@ -654,6 +658,180 @@ test_wizard_doc_no_legacy_paths() {
     fi
 }
 
+# --- Issue #14: install-topology contract over live docs ---
+#
+# v0.4.0 surface: settings.json + 1 enforcement hook (gdlc-prompt-check.sh)
+# + 1 helper (_find-gdlc-root.sh) + 4 skills + wizard doc = 8 managed files;
+# `check` prints 9 rows (8 files + 1 .gitignore row). Live docs must not
+# drift back to the pre-retirement topology (2 hooks / 3 hook files / 10 rows).
+
+# Codex v0.4.0 round-2: SDLC.md is a live doc and belongs in the topology
+# contract. Its "## Hooks (current state — no active SDLC plugin)" section
+# documents the *disabled* sdlc-wizard wrap (a different plugin) for
+# reference only, so that one clearly-marked section is exempt — the rest
+# of the file is guarded like every other live doc.
+guarded_doc_content() {
+    if [ "$1" = "SDLC.md" ]; then
+        awk '/^## Hooks \(current state/ { skip=1; next }
+             skip && /^## / { skip=0 }
+             !skip' "$REPO_ROOT/$1"
+    else
+        cat "$REPO_ROOT/$1"
+    fi
+}
+
+test_live_docs_match_install_topology() {
+    local problems=""
+    local wizard="$REPO_ROOT/CLAUDE_CODE_GDLC_WIZARD.md"
+    # (1) The wizard doc's managed-files table must list the full CLI-managed
+    # surface — consumers audit their install against this table.
+    for p in ".claude/settings.json" ".claude/hooks/gdlc-prompt-check.sh" ".claude/hooks/_find-gdlc-root.sh"; do
+        grep -q -- "$p" "$wizard" || problems="$problems wizard-table-missing-${p##*/}"
+    done
+    # (2) Stale pre-v0.4.0 topology counts must not appear in live docs
+    # or shipped skills. (CHANGELOG and .reviews/ are history and exempt
+    # by omission; SDLC.md's disabled-wrap section is exempt via
+    # guarded_doc_content.)
+    for f in CLAUDE_CODE_GDLC_WIZARD.md README.md TESTING.md ARCHITECTURE.md CLAUDE.md SDLC.md \
+             skills/gdlc/SKILL.md skills/gdlc-setup/SKILL.md skills/gdlc-update/SKILL.md skills/gdlc-feedback/SKILL.md; do
+        if guarded_doc_content "$f" | grep -E '2 hooks|3 hooks|3 hook files|10 rows|9 files' >/dev/null 2>&1; then
+            problems="$problems stale-topology-count-in-$f"
+        fi
+    done
+    # (3) InstructionsLoaded may appear in live docs only as a retirement
+    # note — never as live guidance (CC discards its output; issue #14).
+    for f in CLAUDE_CODE_GDLC_WIZARD.md README.md TESTING.md ARCHITECTURE.md CLAUDE.md SDLC.md \
+             skills/gdlc/SKILL.md skills/gdlc-setup/SKILL.md skills/gdlc-update/SKILL.md skills/gdlc-feedback/SKILL.md; do
+        if guarded_doc_content "$f" 2>/dev/null | grep "InstructionsLoaded" | grep -qv "retire"; then
+            problems="$problems live-instructionsloaded-guidance-in-$f"
+        fi
+    done
+    if [ -z "$problems" ]; then
+        pass "Live docs (incl. SDLC.md outside disabled-wrap section) match the v0.4.0 install topology"
+    else
+        fail "Live docs drifted from install topology:$problems (issue #14)"
+    fi
+}
+
+# --- Issue #15: Codex reviewer generation sync (GPT-5.6 Sol) ---
+#
+# Per-location assertions require BOTH the generation number ("5.6") AND the
+# codename ("Sol") together. Codename-only checks would keep passing after a
+# future "GPT-5.7 Sol"-style bump; number-only checks would pass if the
+# codename drifts. Historical citations (past benchmarks on GPT-5.5/5.4) are
+# exempt — but AI_SETUP_LANES.md and README.md carry live guidance only.
+
+LANES_DOC="$REPO_ROOT/AI_SETUP_LANES.md"
+
+test_lanes_reviewer_rows_use_gpt56_sol() {
+    # Every Codex reviewer table row in the lanes doc (Setups A and B) must
+    # name the current reviewer generation + codename. Setup C's row is
+    # "None" and is intentionally not matched. Exactly 2 rows expected —
+    # a count assertion, or the loop passes vacuously when rows are deleted.
+    local bad="" count=0
+    while IFS= read -r line; do
+        count=$((count + 1))
+        case "$line" in
+            *"5.6"*Sol*) ;;
+            *) bad="$bad [$line]" ;;
+        esac
+    done < <(grep -E '^\| \*\*Reviewer\*\* \| Codex' "$LANES_DOC")
+    if [ "$count" -ne 2 ]; then
+        bad="$bad [expected 2 Codex reviewer rows, found $count]"
+    fi
+    if [ -z "$bad" ]; then
+        pass "AI_SETUP_LANES.md has exactly 2 reviewer rows naming GPT-5.6 Sol (number + codename together)"
+    else
+        fail "AI_SETUP_LANES.md reviewer rows broken:$bad (issue #15)"
+    fi
+}
+
+test_lanes_final_review_policy_gpt56_sol() {
+    # The Final Review Policy must (a) end Setups A and B at GPT-5.6 Sol
+    # xhigh, (b) document the Sol -> Terra fallback (not GPT-5.4), and
+    # (c) carry the escalation-for-risky-PRs paragraph from sdlc-wizard #441.
+    local policy_line fallback_line
+    policy_line="$(grep 'Setups A and B end at' "$LANES_DOC" || true)"
+    fallback_line="$(grep "isn't available on your OpenAI account" "$LANES_DOC" || true)"
+    local problems=""
+    case "$policy_line" in
+        *"5.6"*Sol*xhigh*) ;;
+        *) problems="$problems policy-line-not-gpt56-sol-xhigh" ;;
+    esac
+    case "$fallback_line" in
+        *"5.6"*Sol*Terra*) ;;
+        *) problems="$problems fallback-not-sol-to-terra" ;;
+    esac
+    if grep -q "GPT-5\.4" "$LANES_DOC"; then
+        problems="$problems stale-gpt54-fallback-present"
+    fi
+    # The escalation paragraph must carry its substance, not just its heading:
+    # the max/Pro escalation target and the risk triggers (security-sensitive,
+    # high blast radius) from sdlc-wizard #441.
+    local escalation_line
+    escalation_line="$(grep "Escalation for unusually risky PRs" "$LANES_DOC" || true)"
+    if [ -z "$escalation_line" ]; then
+        problems="$problems escalation-paragraph-missing"
+    else
+        case "$escalation_line" in
+            *'`max` or Pro mode'*) ;;
+            *) problems="$problems escalation-missing-max-or-pro-target" ;;
+        esac
+        case "$escalation_line" in
+            *security-sensitive*) ;;
+            *) problems="$problems escalation-missing-security-sensitive-trigger" ;;
+        esac
+        case "$escalation_line" in
+            *"blast radius"*) ;;
+            *) problems="$problems escalation-missing-blast-radius-trigger" ;;
+        esac
+    fi
+    if [ -z "$problems" ]; then
+        pass "AI_SETUP_LANES.md Final Review Policy: GPT-5.6 Sol xhigh, Sol->Terra fallback, escalation paragraph"
+    else
+        fail "AI_SETUP_LANES.md Final Review Policy broken:$problems (issue #15)"
+    fi
+}
+
+test_lanes_no_stale_gpt55() {
+    # AI_SETUP_LANES.md is live guidance, not history — zero GPT-5.5 refs
+    # allowed after the Sol sync. (Historical citations live in CHANGELOG.)
+    local hits
+    hits="$(grep -c "GPT-5\.5" "$LANES_DOC" 2>/dev/null || true)"
+    [ -z "$hits" ] && hits=0
+    if [ "$hits" -eq 0 ]; then
+        pass "AI_SETUP_LANES.md has no stale GPT-5.5 references"
+    else
+        fail "AI_SETUP_LANES.md still contains $hits GPT-5.5 reference(s) — reviewer is GPT-5.6 Sol (issue #15)"
+    fi
+}
+
+test_readme_lane_table_gpt56_sol() {
+    # README's lane summary table (Premium + Saver rows) must match the lanes
+    # doc: reviewer cells name GPT-5.6 Sol, and no stale GPT-5.5 anywhere.
+    local f="$REPO_ROOT/README.md"
+    local problems=""
+    for lane in "GDLC Premium" "GDLC Saver"; do
+        local row
+        row="$(grep "$lane" "$f" || true)"
+        case "$row" in
+            *"5.6"*Sol*) ;;
+            *) problems="$problems $lane-row-not-gpt56-sol" ;;
+        esac
+    done
+    if grep -q "GPT-5\.5" "$f"; then
+        problems="$problems stale-gpt55-in-readme"
+    fi
+    if grep -q "GPT-5\.4" "$f"; then
+        problems="$problems stale-gpt54-in-readme"
+    fi
+    if [ -z "$problems" ]; then
+        pass "README lane table names GPT-5.6 Sol reviewer (number + codename together), no stale GPT-5.5/5.4"
+    else
+        fail "README lane table broken:$problems (issue #15)"
+    fi
+}
+
 # --- Run ---
 
 test_all_skills_have_effort_high
@@ -693,6 +871,11 @@ test_setup_links_surrounding_playbooks
 test_wizard_doc_documents_playbook_linkage
 test_setup_handles_zero_byte_gdlc_stub
 test_setup_step_5_5_idempotency_is_tolerant
+test_live_docs_match_install_topology
+test_lanes_reviewer_rows_use_gpt56_sol
+test_lanes_final_review_policy_gpt56_sol
+test_lanes_no_stale_gpt55
+test_readme_lane_table_gpt56_sol
 
 echo ""
 echo "=== Results ==="
