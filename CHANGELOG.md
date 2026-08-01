@@ -5,6 +5,34 @@ This file tracks the **distribution wizard** (CLI, plugin, hooks, install script
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-07-12
+
+**Fable-led self-enforcement audit (issue #14) + GPT-5.6 Sol reviewer sync (issue #15).**
+
+### Removed
+- **Issue #14 — `hooks/gdlc-instructions-loaded-check.sh` retired.** The audit traced the `InstructionsLoaded` dispatch end-to-end: Claude Code discards the hook's stdout and ignores its exit code (including exit 2), so the hook could never surface its "SETUP NOT COMPLETE" nag or its dual-install warning to the model or the user. It was a verified no-op in every consumer install. `hooks/hooks.json` and `cli/templates/settings.json` now declare a single event (`UserPromptSubmit`); the event-parity test enforces the match.
+
+### Changed
+- **Dual-install nudge moved to `gdlc-prompt-check.sh`** (`UserPromptSubmit` — an event whose stdout Claude Code actually injects). Warns when both the plugin install (`~/.claude/plugins/cache/gdlc-wizard-local`) and the CLI install are detected in the same project.
+- **`_find-gdlc-root.sh` gained a second anchor**: walks up for `GDLC.md` **or** `CLAUDE_CODE_GDLC_WIZARD.md`, so hooks fire correctly in a wizard-managed project that hasn't run `/gdlc-setup` yet (pre-scaffold window).
+- **Issue #15 — Codex cross-model reviewer synced to GPT-5.6 "Sol"** across `AI_SETUP_LANES.md` and the README lane table (was GPT-5.5). Fallback guidance updated GPT-5.4 → Terra (Codex auto-falls back). Default reviewer effort stays `xhigh`; added an "Escalation for unusually risky PRs" paragraph (escalate to `max`/Pro only for security-sensitive / high-blast-radius PRs — ported from claude-sdlc-wizard PR #441). Historical citations (changelogs, `.reviews/` artifacts) left untouched.
+- Stale `~/gdlc/GDLC.md` quick-reference in `gdlc-prompt-check.sh` output replaced with the project-local path.
+- **`cli/init.js::mergeSettings` merges at the nested-command level** (Codex round-1 finding): the legacy sweep and `--force` replacement operate on individual commands *inside* a hook group, not on the whole group — a user command sharing a group with a wizard or legacy command survives, and group fields like `matcher` are preserved. Emptied groups and event keys are still removed. `skills/gdlc-update/SKILL.md` step 4 documents the same semantics.
+- **Shipped docs synced to the v0.4.0 install topology** (Codex round-1 finding): `CLAUDE_CODE_GDLC_WIZARD.md`, README, TESTING.md, and ARCHITECTURE.md now state the current surface — settings.json + 1 enforcement hook + 1 helper + 4 skills + wizard doc = 8 managed files, 9 `check` rows. The wizard doc's managed-files table gained rows for `.claude/settings.json` and both hook scripts.
+- **Test harnesses export a portable locale** (`LC_ALL=C LANG=C`) so an inherited broken locale can't inject setlocale warnings into captured hook/CLI output (Codex round-1 finding — suite failed under the reviewer's environment locale).
+
+### Added
+- **11 new test assertions (whole-suite total 115 → 126):**
+  - **5 contract tests** in `tests/test-skill-contracts.sh` (37 → 42): four issue-#15 reviewer-sync contracts — every reviewer row in `AI_SETUP_LANES.md` and the README lane table must reference "5.6" **and** "Sol" together (codename-only checks would silently pass a future "GPT-5.7 Sol"), with an exact reviewer-row count (deleting rows can't pass vacuously), substantive escalation-paragraph terms (`max`/Pro target, security-sensitive + blast-radius triggers), and zero stale `GPT-5.5`/`GPT-5.4` references in either live file — plus one install-topology contract asserting live docs and shipped skills match the v0.4.0 surface (no stale hook/row counts, no live `InstructionsLoaded` guidance). The topology contract covers `SDLC.md` too, guarded outside its clearly-marked disabled-wrap reference section (Codex round-2).
+  - **4 CLI tests** in `tests/test-cli.sh` (27 → 31): a seeded ≤v0.3.0 install (legacy `gdlc-instructions-loaded-check.sh` on disk + `InstructionsLoaded` settings entry) is fully migrated by `init --force` — file removed, settings entry swept, event key deleted (not merely emptied); user hooks sharing an outer settings group with wizard/legacy commands survive migration with `matcher` intact; plus the round-2 force/non-force matrix — **ordinary `init` (no `--force`)** performs the same unconditional legacy sweep while adding the wizard group as a sibling of a user-owned group, and `init --force` replaces the wizard command in place without touching a **separate user-owned outer group** under the same event.
+  - **1 hook test** in `tests/test-hooks.sh` (13 → 14): `_find-gdlc-root.sh` resolves via the `CLAUDE_CODE_GDLC_WIZARD.md` anchor when no `GDLC.md` exists.
+  - **1 plugin test** in `tests/test-plugin.sh` (20 → 21): `hooks/hooks.json` declares `UserPromptSubmit` and nothing else.
+
+### Migration notes
+- Existing consumers upgrade with `/gdlc-update` or `npx claude-gdlc-wizard init --force`. The CLI removes legacy hook files (`instructions-loaded-check.sh`, `gdlc-instructions-loaded-check.sh`) and strips their settings commands at the nested level — including under events the template no longer declares — regardless of `--force`. User hooks and group fields sharing an event or group with wizard entries are preserved. `check` flags leftover legacy artifacts as DRIFT.
+
+---
+
 ## [0.3.0] — 2026-06-11
 
 **AI Setup Lanes v2 port from sdlc-wizard.** Adds the multi-lane setup flow (Quick, Standard, Deep) that adapts wizard installation depth to project complexity and user preference.

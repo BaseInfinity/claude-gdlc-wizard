@@ -1,9 +1,13 @@
 #!/bin/bash
 # Test CLI distribution tool (claude-gdlc-wizard)
-# Scope: CLI installs settings.json + 3 hook files + 4 skills + wizard doc
+# Scope: CLI installs settings.json + 2 hook files + 4 skills + wizard doc
 # + .gitignore entries. Tests run the real binary end-to-end.
 
 set -e
+
+# Portable locale: an inherited broken LC_ALL makes bash emit setlocale
+# warnings on stderr, which tests capturing hook/CLI output would misread.
+export LC_ALL=C LANG=C
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -105,16 +109,17 @@ test_creates_all_files() {
     [ -f "$d/.claude/settings.json" ] && count=$((count + 1))
     [ -f "$d/.claude/hooks/_find-gdlc-root.sh" ] && count=$((count + 1))
     [ -f "$d/.claude/hooks/gdlc-prompt-check.sh" ] && count=$((count + 1))
-    [ -f "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc/SKILL.md" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc-setup/SKILL.md" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc-update/SKILL.md" ] && count=$((count + 1))
     [ -f "$d/.claude/skills/gdlc-feedback/SKILL.md" ] && count=$((count + 1))
     [ -f "$d/CLAUDE_CODE_GDLC_WIZARD.md" ] && count=$((count + 1))
-    if [ "$count" -eq 9 ]; then
-        pass "init creates all 9 expected files (settings + 3 hook files + 4 skills + wizard doc)"
+    # Retired in v0.4.0: InstructionsLoaded stdout is discarded by Claude Code,
+    # so the instructions-loaded hook must NOT be installed anymore.
+    if [ "$count" -eq 8 ] && [ ! -f "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" ]; then
+        pass "init creates all 8 expected files (settings + 2 hook files + 4 skills + wizard doc), no instructions-loaded hook"
     else
-        fail "init should create 9 files, found $count"
+        fail "init should create 8 files and no instructions-loaded hook, found $count"
     fi
     rm -rf "$d"
 }
@@ -125,30 +130,31 @@ test_hooks_executable() {
     (cd "$d" && node "$CLI" init >/dev/null 2>&1)
     local ok=true
     [ -x "$d/.claude/hooks/gdlc-prompt-check.sh" ] || ok=false
-    [ -x "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" ] || ok=false
     if [ "$ok" = true ]; then
-        pass "init sets the 2 gdlc hook scripts executable"
+        pass "init sets the gdlc-prompt-check hook script executable"
     else
-        fail "init should chmod +x gdlc-prompt-check.sh and gdlc-instructions-loaded-check.sh"
+        fail "init should chmod +x gdlc-prompt-check.sh"
     fi
     rm -rf "$d"
 }
 
-test_settings_json_valid_with_two_events() {
+test_settings_json_valid_with_one_event() {
+    # InstructionsLoaded retired in v0.4.0 — its stdout is discarded by Claude
+    # Code, so UserPromptSubmit is the only event the wizard registers.
     local d
     d=$(make_temp)
     (cd "$d" && node "$CLI" init >/dev/null 2>&1)
-    local hook_count
-    hook_count=$(python3 -c "
+    local events
+    events=$(python3 -c "
 import json
 with open('$d/.claude/settings.json') as f:
     d = json.load(f)
-print(len(d.get('hooks', {})))
+print(' '.join(sorted(d.get('hooks', {}).keys())))
 " 2>/dev/null)
-    if [ "$hook_count" = "2" ]; then
-        pass "settings.json is valid JSON with 2 hook events (UserPromptSubmit + InstructionsLoaded)"
+    if [ "$events" = "UserPromptSubmit" ]; then
+        pass "settings.json is valid JSON with exactly 1 hook event (UserPromptSubmit)"
     else
-        fail "settings.json should declare 2 hook events, got: $hook_count"
+        fail "settings.json should declare only UserPromptSubmit, got: '$events'"
     fi
     rm -rf "$d"
 }
@@ -172,7 +178,7 @@ test_hook_content_is_gdlc_specific() {
     local ok=true
     grep -q "GDLC BASELINE" "$d/.claude/hooks/gdlc-prompt-check.sh" || ok=false
     grep -q "gdlc-setup" "$d/.claude/hooks/gdlc-prompt-check.sh" || ok=false
-    grep -q "GDLC wizard file" "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" || ok=false
+    grep -q "dual-install" "$d/.claude/hooks/gdlc-prompt-check.sh" || ok=false
     # Regression: no leftover SDLC markers
     if grep -q "SDLC BASELINE\|setup-wizard\|SDLC.md" "$d/.claude/hooks/gdlc-prompt-check.sh"; then
         ok=false
@@ -336,7 +342,7 @@ test_check_match_on_fresh_install() {
     output=$(cd "$d" && node "$CLI" check 2>&1 || true)
     local match_count
     match_count=$(echo "$output" | grep -c "MATCH" || true)
-    # settings + 3 hook files + 4 skills + 1 wizard doc + 1 .gitignore = 10 MATCH
+    # settings + 2 hook files + 4 skills + 1 wizard doc + 1 .gitignore = 9 MATCH
     if [ "$match_count" -ge 9 ]; then
         pass "check reports MATCH for fresh install ($match_count matches)"
     else
@@ -389,8 +395,8 @@ test_check_json_is_valid() {
 
 # package.json `files` array MUST include "hooks/" — without it, the npm
 # tarball ships without the hook scripts, and cli/init.js's FILES array
-# (which references hooks/_find-gdlc-root.sh, hooks/gdlc-prompt-check.sh,
-# hooks/gdlc-instructions-loaded-check.sh) breaks 100% of npx installs.
+# (which references hooks/_find-gdlc-root.sh and hooks/gdlc-prompt-check.sh)
+# breaks 100% of npx installs.
 test_package_files_includes_hooks() {
     local pkg="$REPO_ROOT/package.json"
     if jq -e '.files | index("hooks/")' "$pkg" > /dev/null 2>&1; then
@@ -424,15 +430,14 @@ test_hook_shebang_bytes_clean() {
     fi
 }
 
-# --- Legacy hook migration regression (v0.2.1 → v0.2.2 namespace rename) ---
+# --- Legacy hook migration regression ---
 #
-# Seeds a v0.2.1-style state (legacy `instructions-loaded-check.sh` hook file
-# on disk + matching settings.json entry referencing the legacy basename),
-# then runs `init` and verifies:
-#   - the legacy file is gone,
-#   - the namespaced `gdlc-instructions-loaded-check.sh` is installed,
-#   - settings.json has exactly one InstructionsLoaded entry pointing at the
-#     namespaced basename (not appended alongside the legacy entry).
+# Two generations of retired hook artifacts:
+#   v0.2.1: pre-rename `instructions-loaded-check.sh`
+#   v0.3.0: `gdlc-instructions-loaded-check.sh` — retired entirely in v0.4.0
+#           because Claude Code discards InstructionsLoaded stdout (issue #14)
+# `init` must remove the files AND their settings.json entries; `check` must
+# flag any leftover as DRIFT.
 
 seed_v021_legacy_state() {
     local d="$1"
@@ -474,45 +479,279 @@ test_init_removes_legacy_hook_file() {
     (cd "$d" && node "$CLI" init --force >/dev/null 2>&1)
     local ok=true
     [ ! -f "$d/.claude/hooks/instructions-loaded-check.sh" ] || ok=false
-    [ -f "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" ] || ok=false
+    [ ! -f "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" ] || ok=false
     if [ "$ok" = true ]; then
-        pass "init --force removes legacy instructions-loaded-check.sh and installs namespaced replacement"
+        pass "init --force removes legacy instructions-loaded-check.sh without installing a replacement"
     else
-        fail "init --force should remove .claude/hooks/instructions-loaded-check.sh AND install gdlc-instructions-loaded-check.sh"
+        fail "init --force should remove .claude/hooks/instructions-loaded-check.sh and NOT install gdlc-instructions-loaded-check.sh"
     fi
     rm -rf "$d"
 }
 
-test_init_replaces_legacy_settings_entry() {
+test_init_removes_instructions_loaded_settings_entry() {
     local d
     d=$(make_temp)
     seed_v021_legacy_state "$d"
     (cd "$d" && node "$CLI" init --force >/dev/null 2>&1)
-    # After migration, InstructionsLoaded should have exactly ONE entry, and it
-    # should reference the namespaced basename, not the legacy basename.
+    # After migration, the InstructionsLoaded event must be gone entirely —
+    # no wizard hook listens on it anymore.
     local entry_count
-    entry_count=$(python3 -c "
+    # The event key itself must be deleted — an empty "InstructionsLoaded": []
+    # left behind is exactly the stranding bug this migration exists to fix.
+    local key_state
+    key_state=$(python3 -c "
 import json
 with open('$d/.claude/settings.json') as f:
     d = json.load(f)
-entries = d['hooks'].get('InstructionsLoaded', [])
-print(len(entries))
+print('ABSENT' if 'InstructionsLoaded' not in d.get('hooks', {}) else 'PRESENT')
 " 2>/dev/null)
-    local has_namespaced
-    has_namespaced=$(python3 -c "
-import json
-with open('$d/.claude/settings.json') as f:
-    d = json.load(f)
-entries = d['hooks'].get('InstructionsLoaded', [])
-flat = [h.get('command','') for e in entries for h in e.get('hooks', [])]
-namespaced = any('gdlc-instructions-loaded-check.sh' in c for c in flat)
-legacy = any(c.endswith('instructions-loaded-check.sh') and 'gdlc-' not in c.split('/')[-1] for c in flat)
-print('1' if (namespaced and not legacy) else '0')
-" 2>/dev/null)
-    if [ "$entry_count" = "1" ] && [ "$has_namespaced" = "1" ]; then
-        pass "init --force replaces legacy InstructionsLoaded entry (1 entry, namespaced only)"
+    if [ "$key_state" = "ABSENT" ]; then
+        pass "init --force deletes the InstructionsLoaded event key entirely"
     else
-        fail "init --force should leave a single InstructionsLoaded entry referencing gdlc-instructions-loaded-check.sh (entries=$entry_count, namespaced-only=$has_namespaced)"
+        fail "init --force should delete the InstructionsLoaded event key, not leave it empty (state: $key_state)"
+    fi
+    rm -rf "$d"
+}
+
+# v0.3.0 → v0.4.0 migration: the namespaced instructions-loaded hook itself
+# is now retired. Seed a clean v0.3.0-style install and verify check flags
+# DRIFT, then init --force removes both the file and its settings entry.
+seed_v030_state() {
+    local d="$1"
+    mkdir -p "$d/.claude/hooks"
+    cat > "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" <<'V030'
+#!/usr/bin/env bash
+# v0.3.0 hook — retired in v0.4.0 (InstructionsLoaded stdout is discarded)
+echo "WARNING: Missing GDLC wizard file: GDLC.md"
+V030
+    chmod +x "$d/.claude/hooks/gdlc-instructions-loaded-check.sh"
+    cat > "$d/.claude/settings.json" <<'SETTINGS'
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gdlc-prompt-check.sh" }
+        ]
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gdlc-instructions-loaded-check.sh" }
+        ]
+      }
+    ]
+  }
+}
+SETTINGS
+}
+
+test_init_migrates_v030_state() {
+    local d
+    d=$(make_temp)
+    seed_v030_state "$d"
+    local check_output
+    check_output=$(cd "$d" && node "$CLI" check 2>&1) || true
+    (cd "$d" && node "$CLI" init --force >/dev/null 2>&1)
+    local file_gone=true key_state
+    [ ! -f "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" ] || file_gone=false
+    key_state=$(python3 -c "
+import json
+with open('$d/.claude/settings.json') as f:
+    d = json.load(f)
+print('ABSENT' if 'InstructionsLoaded' not in d.get('hooks', {}) else 'PRESENT')
+" 2>/dev/null)
+    if echo "$check_output" | grep -q "DRIFT" \
+        && echo "$check_output" | grep -q "gdlc-instructions-loaded-check.sh" \
+        && [ "$file_gone" = true ] && [ "$key_state" = "ABSENT" ]; then
+        pass "v0.3.0 state: check flags retired hook as DRIFT; init --force removes file + settings entry"
+    else
+        fail "v0.3.0 migration failed (drift-flagged=$(echo "$check_output" | grep -c DRIFT), file_gone=$file_gone, key=$key_state)"
+    fi
+    rm -rf "$d"
+}
+
+# Codex v0.4.0 review Finding 1 (P1): the migration sweep and --force
+# replacement must operate on nested command objects, NEVER on whole outer
+# hook groups — a user hook sharing a group with a wizard/legacy command
+# must survive, and group fields like "matcher" must be preserved.
+test_migration_preserves_user_hooks_in_shared_group() {
+    local d
+    d=$(make_temp)
+    mkdir -p "$d/.claude/hooks"
+    cat > "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" <<'V030'
+#!/usr/bin/env bash
+echo retired
+V030
+    chmod +x "$d/.claude/hooks/gdlc-instructions-loaded-check.sh"
+    # User commands nested INSIDE the same outer groups as wizard/legacy ones.
+    cat > "$d/.claude/settings.json" <<'SETTINGS'
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "keep-me",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gdlc-prompt-check.sh" },
+          { "type": "command", "command": "/opt/user-prompt-hook.sh" }
+        ]
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gdlc-instructions-loaded-check.sh" },
+          { "type": "command", "command": "/opt/user-session-hook.sh" }
+        ]
+      }
+    ]
+  }
+}
+SETTINGS
+    (cd "$d" && node "$CLI" init --force >/dev/null 2>&1)
+    local verdict
+    verdict=$(python3 -c "
+import json
+with open('$d/.claude/settings.json') as f:
+    s = json.load(f)
+hooks = s.get('hooks', {})
+flat = json.dumps(hooks)
+checks = {
+    'user prompt hook survives': '/opt/user-prompt-hook.sh' in flat,
+    'user session hook survives': '/opt/user-session-hook.sh' in flat,
+    'legacy command swept': 'gdlc-instructions-loaded-check.sh' not in flat,
+    'matcher preserved': hooks.get('UserPromptSubmit', [{}])[0].get('matcher') == 'keep-me',
+    'wizard command still present': 'gdlc-prompt-check.sh' in flat,
+}
+failed = [k for k, v in checks.items() if not v]
+print('OK' if not failed else 'FAILED: ' + '; '.join(failed))
+" 2>/dev/null)
+    if [ "$verdict" = "OK" ]; then
+        pass "init --force preserves user hooks sharing an outer group with wizard/legacy commands"
+    else
+        fail "shared-group migration is destructive ($verdict)"
+    fi
+    rm -rf "$d"
+}
+
+# Codex v0.4.0 round-2: the force/non-force migration matrix. The legacy
+# sweep is wizard-owned and NOT gated on --force — ordinary `init` must
+# migrate a ≤v0.3.0 install too, and a user-owned outer group under the
+# same event must survive as a separate sibling of the wizard's group.
+test_ordinary_init_sweeps_legacy_settings() {
+    local d
+    d=$(make_temp)
+    mkdir -p "$d/.claude/hooks"
+    cat > "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" <<'V030'
+#!/usr/bin/env bash
+echo retired
+V030
+    chmod +x "$d/.claude/hooks/gdlc-instructions-loaded-check.sh"
+    # Legacy-only group under InstructionsLoaded + a user-owned outer group
+    # under UserPromptSubmit. No wizard entry yet — ordinary init must add
+    # its own group WITHOUT touching the user's.
+    cat > "$d/.claude/settings.json" <<'SETTINGS'
+{
+  "hooks": {
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gdlc-instructions-loaded-check.sh" }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "user-owned",
+        "hooks": [
+          { "type": "command", "command": "/opt/user-outer-group-hook.sh" }
+        ]
+      }
+    ]
+  }
+}
+SETTINGS
+    (cd "$d" && node "$CLI" init >/dev/null 2>&1)
+    local file_gone=true verdict
+    [ ! -f "$d/.claude/hooks/gdlc-instructions-loaded-check.sh" ] || file_gone=false
+    verdict=$(python3 -c "
+import json
+with open('$d/.claude/settings.json') as f:
+    s = json.load(f)
+hooks = s.get('hooks', {})
+ups = hooks.get('UserPromptSubmit', [])
+flat = json.dumps(hooks)
+checks = {
+    'InstructionsLoaded key deleted without --force': 'InstructionsLoaded' not in hooks,
+    'user outer group survives': '/opt/user-outer-group-hook.sh' in flat,
+    'user matcher preserved': any(g.get('matcher') == 'user-owned' for g in ups),
+    'wizard group added as separate sibling': len(ups) == 2,
+    'wizard command present': 'gdlc-prompt-check.sh' in flat,
+}
+failed = [k for k, v in checks.items() if not v]
+print('OK' if not failed else 'FAILED: ' + '; '.join(failed))
+" 2>/dev/null)
+    if [ "$verdict" = "OK" ] && [ "$file_gone" = true ]; then
+        pass "ordinary init (no --force) sweeps legacy settings + file, preserves separate user group"
+    else
+        fail "ordinary init migration broken (file_gone=$file_gone, $verdict)"
+    fi
+    rm -rf "$d"
+}
+
+test_force_init_preserves_separate_user_groups() {
+    local d
+    d=$(make_temp)
+    mkdir -p "$d/.claude"
+    # Wizard group with a stale command variant + a SEPARATE user-owned outer
+    # group under the same event. --force must replace the wizard command in
+    # place and leave the sibling group untouched.
+    cat > "$d/.claude/settings.json" <<'SETTINGS'
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gdlc-prompt-check.sh --stale-flag" }
+        ]
+      },
+      {
+        "matcher": "user-owned",
+        "hooks": [
+          { "type": "command", "command": "/opt/user-outer-group-hook.sh" }
+        ]
+      }
+    ]
+  }
+}
+SETTINGS
+    (cd "$d" && node "$CLI" init --force >/dev/null 2>&1)
+    local verdict
+    verdict=$(python3 -c "
+import json
+with open('$d/.claude/settings.json') as f:
+    s = json.load(f)
+with open('$REPO_ROOT/cli/templates/settings.json') as f:
+    t = json.load(f)
+expected = t['hooks']['UserPromptSubmit'][0]['hooks'][0]['command']
+hooks = s.get('hooks', {})
+ups = hooks.get('UserPromptSubmit', [])
+flat = json.dumps(hooks)
+checks = {
+    'both outer groups survive': len(ups) == 2,
+    'wizard command replaced in place with template': bool(ups) and ups[0].get('hooks', [{}])[0].get('command') == expected,
+    'stale wizard variant gone': '--stale-flag' not in flat,
+    'user outer group survives': '/opt/user-outer-group-hook.sh' in flat,
+    'user matcher preserved': len(ups) > 1 and ups[1].get('matcher') == 'user-owned',
+}
+failed = [k for k, v in checks.items() if not v]
+print('OK' if not failed else 'FAILED: ' + '; '.join(failed))
+" 2>/dev/null)
+    if [ "$verdict" = "OK" ]; then
+        pass "init --force replaces wizard command in place; separate user outer group untouched"
+    else
+        fail "--force destroyed or duplicated sibling outer groups ($verdict)"
     fi
     rm -rf "$d"
 }
@@ -551,7 +790,7 @@ test_unknown_command
 test_dry_run_no_files
 test_creates_all_files
 test_hooks_executable
-test_settings_json_valid_with_two_events
+test_settings_json_valid_with_one_event
 test_settings_json_uses_project_dir
 test_hook_content_is_gdlc_specific
 test_dir_structure
@@ -569,7 +808,11 @@ test_check_json_is_valid
 test_package_files_includes_hooks
 test_hook_shebang_bytes_clean
 test_init_removes_legacy_hook_file
-test_init_replaces_legacy_settings_entry
+test_init_removes_instructions_loaded_settings_entry
+test_init_migrates_v030_state
+test_migration_preserves_user_hooks_in_shared_group
+test_ordinary_init_sweeps_legacy_settings
+test_force_init_preserves_separate_user_groups
 test_check_flags_legacy_hook_drift
 
 echo ""

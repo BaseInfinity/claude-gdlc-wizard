@@ -6,6 +6,10 @@
 
 set -e
 
+# Portable locale: an inherited broken LC_ALL makes bash emit setlocale
+# warnings on stderr, which tests capturing hook/CLI output would misread.
+export LC_ALL=C LANG=C
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INSTALL_SCRIPT="$REPO_ROOT/install.sh"

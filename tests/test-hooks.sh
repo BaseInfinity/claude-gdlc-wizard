@@ -1,8 +1,12 @@
 #!/bin/bash
 # Hook behavior tests — run the real hook scripts and verify output.
-# Covers: gdlc-prompt-check, gdlc-instructions-loaded-check, _find-gdlc-root.
+# Covers: gdlc-prompt-check, _find-gdlc-root.
 
 set -e
+
+# Portable locale: an inherited broken LC_ALL makes bash emit setlocale
+# warnings on stderr, which tests capturing hook/CLI output would misread.
+export LC_ALL=C LANG=C
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -35,6 +39,15 @@ make_project_without_gdlc() {
     echo "$d"
 }
 
+# Fresh-install state: the CLI installed the wizard doc, but gdlc-setup
+# hasn't run yet so GDLC.md doesn't exist.
+make_project_with_wizard_doc_only() {
+    local d
+    d=$(mktemp -d "${TMPDIR:-/tmp}/gdlc-hooks-wizard-XXXXXX")
+    echo "# Claude Code GDLC Wizard — test" > "$d/CLAUDE_CODE_GDLC_WIZARD.md"
+    echo "$d"
+}
+
 echo "=== Hook Behavior Tests ==="
 echo ""
 
@@ -64,6 +77,22 @@ test_find_gdlc_root_walks_up() {
         pass "_find-gdlc-root walks up from subdir to find GDLC.md"
     else
         fail "_find-gdlc-root should walk up from subdir"
+    fi
+    rm -rf "$d"
+}
+
+test_find_gdlc_root_finds_wizard_doc_marker() {
+    # Fresh install: CLI put down CLAUDE_CODE_GDLC_WIZARD.md but gdlc-setup
+    # hasn't created GDLC.md yet. The root finder must still anchor here,
+    # otherwise the setup nudge below can never fire (issue #14 finding).
+    local d
+    d=$(make_project_with_wizard_doc_only)
+    local result
+    result=$(cd "$d" && bash -c "source '$HOOK_DIR/_find-gdlc-root.sh' && find_gdlc_root && echo \"\$GDLC_ROOT\"") || true
+    if [ -n "$result" ] && [ -f "$result/CLAUDE_CODE_GDLC_WIZARD.md" ]; then
+        pass "_find-gdlc-root anchors on CLAUDE_CODE_GDLC_WIZARD.md when GDLC.md absent"
+    else
+        fail "_find-gdlc-root should anchor on the wizard doc (got: '$result')"
     fi
     rm -rf "$d"
 }
@@ -124,6 +153,53 @@ test_prompt_check_setup_notice_when_empty_gdlc() {
     rm -rf "$d"
 }
 
+test_prompt_check_setup_notice_when_wizard_doc_only() {
+    # Fresh-install state (wizard installed, setup never run) MUST produce the
+    # setup nudge — this was silently dead before issue #14.
+    local d
+    d=$(make_project_with_wizard_doc_only)
+    local output
+    output=$(cd "$d" && bash "$HOOK_DIR/gdlc-prompt-check.sh" 2>&1)
+    if echo "$output" | grep -q "SETUP NOT COMPLETE" && echo "$output" | grep -q "gdlc-setup"; then
+        pass "gdlc-prompt-check nudges to gdlc-setup on fresh install (wizard doc, no GDLC.md)"
+    else
+        fail "gdlc-prompt-check should emit SETUP NOT COMPLETE on fresh install (got: $output)"
+    fi
+    rm -rf "$d"
+}
+
+test_prompt_check_no_legacy_sibling_path() {
+    # Path A removed the ~/gdlc/ sibling clone — consumers never have it, so
+    # hook output must not point there. Scan the scripts, not just one string.
+    if grep -q '~/gdlc' "$HOOK_DIR"/*.sh; then
+        fail "hook scripts reference legacy ~/gdlc/ sibling path (pre-Path-A)"
+    else
+        pass "hook scripts contain no legacy ~/gdlc/ sibling references"
+    fi
+}
+
+test_prompt_check_dual_install_warning() {
+    # Dual-channel install (CLI skills + plugin) must be surfaced on the
+    # UserPromptSubmit hook — InstructionsLoaded stdout is discarded by
+    # Claude Code, so a warning there never reaches anyone.
+    local d
+    d=$(make_project_with_gdlc)
+    mkdir -p "$d/.claude/skills/gdlc-update"
+    mkdir -p "$HOME/.claude/plugins-local/gdlc-wizard-wrap"
+    local output
+    output=$(cd "$d" && bash "$HOOK_DIR/gdlc-prompt-check.sh" 2>&1)
+    rm -rf "$HOME/.claude/plugins-local/gdlc-wizard-wrap"
+    local clean_output
+    clean_output=$(cd "$d" && bash "$HOOK_DIR/gdlc-prompt-check.sh" 2>&1)
+    if echo "$output" | grep -q "dual-install" \
+        && ! echo "$clean_output" | grep -q "dual-install"; then
+        pass "gdlc-prompt-check warns on dual-install and stays quiet when single-channel"
+    else
+        fail "gdlc-prompt-check should emit dual-install warning only when both channels present"
+    fi
+    rm -rf "$d"
+}
+
 test_prompt_check_mentions_three_cycle_types() {
     local d
     d=$(make_project_with_gdlc)
@@ -143,7 +219,7 @@ test_prompt_check_mentions_three_cycle_types() {
 
 test_prompt_check_always_exits_zero() {
     # Hook MUST not block the prompt flow — should always exit 0.
-    for scenario in "make_project_with_gdlc" "make_project_without_gdlc"; do
+    for scenario in "make_project_with_gdlc" "make_project_without_gdlc" "make_project_with_wizard_doc_only"; do
         local d
         d=$($scenario)
         local exit_code=0
@@ -156,51 +232,6 @@ test_prompt_check_always_exits_zero() {
         rm -rf "$d"
     done
     pass "gdlc-prompt-check always exits 0 (non-blocking)"
-}
-
-# --- gdlc-instructions-loaded-check ---
-
-test_instructions_loaded_silent_outside_project() {
-    local d
-    d=$(make_project_without_gdlc)
-    local output
-    output=$(cd "$d" && bash "$HOOK_DIR/gdlc-instructions-loaded-check.sh" 2>&1)
-    if [ -z "$output" ]; then
-        pass "gdlc-instructions-loaded-check is silent when no GDLC project found"
-    else
-        fail "gdlc-instructions-loaded-check should stay silent outside GDLC project (got: $output)"
-    fi
-    rm -rf "$d"
-}
-
-test_instructions_loaded_silent_when_gdlc_present() {
-    local d
-    d=$(make_project_with_gdlc)
-    local output
-    output=$(cd "$d" && bash "$HOOK_DIR/gdlc-instructions-loaded-check.sh" 2>&1)
-    if [ -z "$output" ]; then
-        pass "gdlc-instructions-loaded-check is silent when GDLC.md present"
-    else
-        fail "gdlc-instructions-loaded-check should stay silent when GDLC.md present (got: $output)"
-    fi
-    rm -rf "$d"
-}
-
-test_instructions_loaded_always_exits_zero() {
-    # Must not block session start under ANY scenario.
-    for scenario in "make_project_with_gdlc" "make_project_without_gdlc"; do
-        local d
-        d=$($scenario)
-        local exit_code=0
-        (cd "$d" && bash "$HOOK_DIR/gdlc-instructions-loaded-check.sh" >/dev/null 2>&1) || exit_code=$?
-        if [ "$exit_code" -ne 0 ]; then
-            fail "gdlc-instructions-loaded-check should exit 0 under '$scenario' (got $exit_code)"
-            rm -rf "$d"
-            return
-        fi
-        rm -rf "$d"
-    done
-    pass "gdlc-instructions-loaded-check always exits 0 (non-blocking)"
 }
 
 # --- Workflow YAML sanity ---
@@ -235,15 +266,16 @@ test_ci_workflow_runs_test_suite() {
 
 test_find_gdlc_root_finds_project
 test_find_gdlc_root_walks_up
+test_find_gdlc_root_finds_wizard_doc_marker
 test_find_gdlc_root_returns_nonzero_when_absent
 test_prompt_check_silent_outside_project
 test_prompt_check_baseline_when_gdlc_present
 test_prompt_check_setup_notice_when_empty_gdlc
+test_prompt_check_setup_notice_when_wizard_doc_only
+test_prompt_check_no_legacy_sibling_path
+test_prompt_check_dual_install_warning
 test_prompt_check_mentions_three_cycle_types
 test_prompt_check_always_exits_zero
-test_instructions_loaded_silent_outside_project
-test_instructions_loaded_silent_when_gdlc_present
-test_instructions_loaded_always_exits_zero
 test_ci_workflow_valid_yaml
 test_ci_workflow_runs_test_suite
 

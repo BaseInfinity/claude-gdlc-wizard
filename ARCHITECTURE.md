@@ -8,12 +8,12 @@
  │                                                                        │
  │   GDLC.md     ◀─── playbook (cycles, personas, rubrics, rules)        │
  │   skills/     ◀─── 4 SKILL.md files (gdlc, gdlc-setup, etc.)          │
- │   hooks/      ◀─── 2 enforcement hooks + 1 sourced helper              │
+ │   hooks/      ◀─── 1 enforcement hook + 1 sourced helper               │
  │   cli/        ◀─── Node CLI: init / check / --force / --dry-run / JSON │
  │   install.sh  ◀─── curl|bash bootstrap → npx claude-gdlc-wizard        │
  │   .claude-plugin/  ◀─── plugin.json + marketplace.json                 │
  │   CLAUDE_CODE_GDLC_WIZARD.md  ◀─── canonical wizard doc (shipped)      │
- │   tests/      ◀─── 5 bash suites, 102 assertions, CI-gated             │
+ │   tests/      ◀─── 5 bash suites, 126 assertions, CI-gated             │
  │   .reviews/   ◀─── per-release preflight + Codex handoff               │
  └──────────────────────────────┬─────────────────────────────────────────┘
                                 │  distribution channels
@@ -36,7 +36,7 @@
 ```
 claude-gdlc-wizard/
 ├── .claude-plugin/
-│   ├── plugin.json            — name: gdlc-wizard, version: 0.1.0
+│   ├── plugin.json            — name: gdlc-wizard, version in lockstep with package.json
 │   └── marketplace.json       — local-marketplace wrapper listing
 ├── .github/
 │   └── workflows/
@@ -55,8 +55,7 @@ claude-gdlc-wizard/
 │       └── settings.json      — CLI-mode hook registration ($CLAUDE_PROJECT_DIR)
 ├── hooks/
 │   ├── _find-gdlc-root.sh     — sourced helper: walks up CWD to find GDLC.md
-│   ├── gdlc-prompt-check.sh   — UserPromptSubmit: GDLC BASELINE / SETUP NOT COMPLETE
-│   ├── gdlc-instructions-loaded-check.sh  — InstructionsLoaded: missing-GDLC.md warning + dual-install nudge
+│   ├── gdlc-prompt-check.sh   — UserPromptSubmit: GDLC BASELINE / SETUP NOT COMPLETE + dual-install nudge
 │   └── hooks.json             — plugin-mode hook registration (${CLAUDE_PLUGIN_ROOT})
 ├── skills/
 │   ├── gdlc/SKILL.md              — cycle picker, triangulation, P0-to-TDD promotion
@@ -64,11 +63,11 @@ claude-gdlc-wizard/
 │   ├── gdlc-update/SKILL.md       — CHANGELOG diff, drift detection, per-file apply
 │   └── gdlc-feedback/SKILL.md     — structured upstream issues (stock labels + canonical types)
 ├── tests/
-│   ├── test-cli.sh            — CLI integration  (24 assertions)
-│   ├── test-hooks.sh          — hook behavior    (13 assertions)
+│   ├── test-cli.sh            — CLI integration  (31 assertions)
+│   ├── test-hooks.sh          — hook behavior    (14 assertions)
 │   ├── test-install-script.sh — install.sh      (18 assertions)
-│   ├── test-plugin.sh         — plugin + CLI parity (20 assertions)
-│   └── test-skill-contracts.sh— Prove-It-Gate   (27 assertions)
+│   ├── test-plugin.sh         — plugin + CLI parity (21 assertions)
+│   └── test-skill-contracts.sh— Prove-It-Gate   (42 assertions)
 ├── CHANGELOG.md
 ├── CLAUDE.md                  — Claude instructions for developing THIS repo
 ├── CLAUDE_CODE_GDLC_WIZARD.md — wizard doc SHIPPED to consumers
@@ -88,13 +87,14 @@ Four markdown files with YAML frontmatter. Consumers invoke them as `/gdlc`, `/g
 
 ### `hooks/` (enforcement at session boundaries)
 
-Three files. Only 2 are executable:
+Two scripts. Only 1 is executable:
 
-- **`gdlc-prompt-check.sh`** fires on `UserPromptSubmit`. Reads project root via `_find-gdlc-root.sh`, inspects `GDLC.md`, and emits one of: `GDLC BASELINE:` (case-study loaded, cycle reminder), `SETUP NOT COMPLETE:` (GDLC.md empty — directs to `/gdlc-setup`), or silent (not in a GDLC project). **Always exits 0.** Blocking the user's prompt is not an option.
-- **`gdlc-instructions-loaded-check.sh`** fires on `InstructionsLoaded`. Validates session-start state; surfaces dual-install guidance if `claude-sdlc-wizard` is detected alongside.
-- **`_find-gdlc-root.sh`** is sourced, not executed. It walks up from CWD until it finds a `GDLC.md`, sets `GDLC_ROOT`, or returns non-zero if no project root is found.
+- **`gdlc-prompt-check.sh`** fires on `UserPromptSubmit`. Reads project root via `_find-gdlc-root.sh`, inspects `GDLC.md`, and emits one of: `GDLC BASELINE:` (case-study loaded, cycle reminder), `SETUP NOT COMPLETE:` (GDLC.md empty — directs to `/gdlc-setup`), or silent (not in a GDLC project). Also surfaces a dual-install warning when both the plugin and CLI installs of this wizard are detected. **Always exits 0.** Blocking the user's prompt is not an option.
+- **`_find-gdlc-root.sh`** is sourced, not executed. It walks up from CWD until it finds a `GDLC.md` or `CLAUDE_CODE_GDLC_WIZARD.md`, sets `GDLC_ROOT`, or returns non-zero if no project root is found.
 
-Shipped by the plugin via `hooks/hooks.json` (using `${CLAUDE_PLUGIN_ROOT}`) and by the CLI via `cli/templates/settings.json` (using `$CLAUDE_PROJECT_DIR`). Both declare the **same 2 events** — `UserPromptSubmit` and `InstructionsLoaded`. Event parity is enforced by `tests/test-plugin.sh`; drift between them means plugin users and CLI users would see different behavior.
+(`gdlc-instructions-loaded-check.sh` was retired in v0.4.0 — issue #14's audit confirmed Claude Code discards `InstructionsLoaded` stdout and ignores its exit code, so the hook could never surface anything. Its dual-install nudge moved into `gdlc-prompt-check.sh`.)
+
+Shipped by the plugin via `hooks/hooks.json` (using `${CLAUDE_PLUGIN_ROOT}`) and by the CLI via `cli/templates/settings.json` (using `$CLAUDE_PROJECT_DIR`). Both declare the **same single event** — `UserPromptSubmit`. Event parity is enforced by `tests/test-plugin.sh`; drift between them means plugin users and CLI users would see different behavior.
 
 ### `cli/` (the installer surface)
 
@@ -115,7 +115,7 @@ Node 18+, CommonJS, zero runtime deps. Two files do the real work:
 
 ### `tests/` (the compliance gate)
 
-5 bash suites, 102 assertions, integration-heavy, zero mocks. See `TESTING.md` for the per-suite breakdown. CI runs all 5 on every push + PR.
+5 bash suites, 126 assertions, integration-heavy, zero mocks. See `TESTING.md` for the per-suite breakdown. CI runs all 5 on every push + PR.
 
 ### `.reviews/` (per-release QA)
 
@@ -149,9 +149,9 @@ Skills now read from project-local paths (`CLAUDE_CODE_GDLC_WIZARD.md` at the co
 
 Plugin users get `${CLAUDE_PLUGIN_ROOT}` prefixes (resolved by CC from plugin install location). CLI users get `$CLAUDE_PROJECT_DIR` prefixes (resolved against consumer project root). Same hook scripts, two different resolution contexts. Swapping these breaks installs silently — only the test suite catches the mismatch. Reinforced by `tests/test-plugin.sh`.
 
-### 2 hooks only (vs SDLC's 5)
+### 1 enforcement hook + 1 helper (vs SDLC's 5 hooks)
 
-Dropped `tdd-pretool-check.sh` (code-specific), `model-effort-check.sh` (SDLC-shaped nudge), `precompact-seam-check.sh` (depends on SDLC handoff.json schema). GDLC-specific hooks only. Users who want code-TDD discipline install `claude-sdlc-wizard` alongside — the dual-install is the explicit recommendation, not a bug.
+Dropped `tdd-pretool-check.sh` (code-specific), `model-effort-check.sh` (SDLC-shaped nudge), `precompact-seam-check.sh` (depends on SDLC handoff.json schema); retired `gdlc-instructions-loaded-check.sh` in v0.4.0 (no-op event — see above). GDLC-specific hooks only. Users who want code-TDD discipline install `claude-sdlc-wizard` alongside — the dual-install is the explicit recommendation, not a bug.
 
 ### No `scripts/` directory
 

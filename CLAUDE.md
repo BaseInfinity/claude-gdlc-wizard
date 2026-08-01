@@ -15,13 +15,13 @@ This is a **meta-repository**. It contains the distribution machinery for the GD
 - `FEEDBACK_SKILL_SPEC.md` — design spec for the feedback skill.
 - `PLAYBOOK_CHANGELOG.md` — framework changelog (rule-version history, playtest cycles, skill bumps). Distinct from `CHANGELOG.md` which tracks the distribution wizard.
 - `skills/{gdlc,gdlc-setup,gdlc-update,gdlc-feedback}/SKILL.md` — the 4 skills consumers install.
-- `hooks/{gdlc-prompt-check.sh, gdlc-instructions-loaded-check.sh, _find-gdlc-root.sh}` — 2 enforcement hooks + 1 sourced helper.
+- `hooks/{gdlc-prompt-check.sh, _find-gdlc-root.sh}` — 1 enforcement hook + 1 sourced helper. (`gdlc-instructions-loaded-check.sh` retired in v0.4.0 — Claude Code discards `InstructionsLoaded` stdout, so the hook was a no-op.)
 - `hooks/hooks.json` — plugin-format registration (`${CLAUDE_PLUGIN_ROOT}`).
 - `cli/bin/gdlc-wizard.js` + `cli/init.js` + `cli/templates/settings.json` — Node CLI (`npx claude-gdlc-wizard init`).
 - `install.sh` — `curl | bash` bootstrap pointed at `npx claude-gdlc-wizard`.
 - `.claude-plugin/{plugin.json,marketplace.json}` — Claude Code plugin manifest + local marketplace listing.
 - `CLAUDE_CODE_GDLC_WIZARD.md` — the canonical wizard doc shipped to consumers.
-- `tests/*.sh` — 5 bash test suites, 102 assertions (see TESTING.md).
+- `tests/*.sh` — 5 bash test suites, 126 assertions (see TESTING.md).
 - `.github/workflows/ci.yml` — runs the full test suite on push + PR.
 - `.reviews/` — preflight + Codex cross-model handoff per release.
 
@@ -54,11 +54,11 @@ All tests are bash, run directly. `package.json` intentionally has no `scripts` 
 | Command | Purpose |
 |---------|---------|
 | `git checkout -- hooks/ && for t in tests/*.sh; do bash "$t" \|\| break; done` | Full test run (restore hooks first — see *Session quirks* below) |
-| `bash tests/test-cli.sh` | CLI integration (init/check/help/version, 24 assertions) |
-| `bash tests/test-hooks.sh` | Hook behavior (`_find-gdlc-root` walk-up, SETUP-vs-BASELINE emission, 13 assertions) |
+| `bash tests/test-cli.sh` | CLI integration (init/check/help/version, 31 assertions) |
+| `bash tests/test-hooks.sh` | Hook behavior (`_find-gdlc-root` walk-up, SETUP-vs-BASELINE emission, 14 assertions) |
 | `bash tests/test-install-script.sh` | Install-script structure (18 assertions; live-install gated by `CLAUDE_GDLC_WIZARD_NPM_PUBLISHED=1`) |
-| `bash tests/test-plugin.sh` | Plugin/CLI parity (plugin.json + marketplace.json validity, hooks.json events, path-prefix split, 20 assertions) |
-| `bash tests/test-skill-contracts.sh` | Prove-It-Gate contract tests across all 4 skills + wizard doc (27 assertions) |
+| `bash tests/test-plugin.sh` | Plugin/CLI parity (plugin.json + marketplace.json validity, hooks.json events, path-prefix split, 21 assertions) |
+| `bash tests/test-skill-contracts.sh` | Prove-It-Gate contract tests across all 4 skills + wizard doc + lanes doc (42 assertions) |
 | `node cli/bin/gdlc-wizard.js --help` | Inspect the CLI surface |
 | `node cli/bin/gdlc-wizard.js init --dry-run` | Print the install plan without writing (safe to run anywhere) |
 | `cd $(mktemp -d) && node /Users/stefanayala/claude-gdlc-wizard/cli/bin/gdlc-wizard.js init` | Real install in a throwaway scratch dir |
@@ -100,7 +100,7 @@ See `ARCHITECTURE.md` for the full diagram and component boundaries.
 
 ## Testing
 
-See `TESTING.md`. Short version: this is a **meta-project**, so tests exercise wizard installation + script behavior + plugin parity, not application code. 102 assertions across 5 suites today; Prove-It-Gate discipline — no tautologies.
+See `TESTING.md`. Short version: this is a **meta-project**, so tests exercise wizard installation + script behavior + plugin parity, not application code. 126 assertions across 5 suites today; Prove-It-Gate discipline — no tautologies.
 
 ## Git / Commits
 
